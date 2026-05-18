@@ -4,6 +4,7 @@
 ### Helm ###
 # Chart dependencies
 **/charts/*.tgz
+charts/s4/
 
 ### Linux ###
 *~

@@ -14,12 +14,27 @@ help: ## This help message
 	@echo "Pattern: $(NAME)"
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^(\s|[a-zA-Z_0-9-])+:.*?##/ { printf "  \033[36m%-35s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
+S4_CHART_REPO ?= https://github.com/rh-aiservices-bu/s4.git
+S4_CHART_REF ?= main
+
+.PHONY: helm-deps
+helm-deps: ## Vendor the upstream s4 chart and download Helm dependencies
+	@mkdir -p charts
+	@if [ ! -f charts/s4/Chart.yaml ]; then \
+		rm -rf /tmp/s4-chart-vendor; \
+		git clone --depth 1 --branch $(S4_CHART_REF) $(S4_CHART_REPO) /tmp/s4-chart-vendor; \
+		rm -rf charts/s4; \
+		cp -a /tmp/s4-chart-vendor/charts/s4 charts/s4; \
+		rm -rf /tmp/s4-chart-vendor; \
+	fi
+	helm dependency update .
+
 .PHONY: helm-lint
-helm-lint: ## Runs helm lint against the chart
+helm-lint: helm-deps ## Runs helm lint against the chart
 	helm lint .
 
 .PHONY: helm-unittest
-helm-unittest: ## Runs the helm unit tests
+helm-unittest: helm-deps ## Runs the helm unit tests
 	podman run $(PODMAN_ARGS) -v $(PWD):/apps:rw $(HELM_UNITTEST_IMAGE) .
 
 .PHONY: helm-docs

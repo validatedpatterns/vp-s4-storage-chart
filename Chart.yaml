@@ -1,6 +1,23 @@
+---
 apiVersion: v2
-description: A Helm chart to serve as the Validated Patterns Template
+name: vp-s4-storage
+description: >-
+  Validated Patterns chart for S4 object storage with External Secrets,
+  bucket provisioning via a ConfigMap-mounted Ansible playbook, and the upstream s4 Helm chart.
 keywords:
   - pattern
-name: vp-template
-version: 0.0.1
+  - s4
+  - storage
+  - s3
+home: https://github.com/rh-aiservices-bu/s4
+sources:
+  - https://github.com/rh-aiservices-bu/s4
+  - https://github.com/eduffy-redhat/s4-role
+version: 0.1.0
+dependencies:
+  - name: s4
+    version: "0.1.0"
+    repository: file://charts/s4
+  - name: vp-rbac
+    version: "0.1.*"
+    repository: https://charts.validatedpatterns.io

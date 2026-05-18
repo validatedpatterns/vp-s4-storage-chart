@@ -1,0 +1,9 @@
+dependencies:
+- name: s4
+  repository: file://charts/s4
+  version: 0.1.0
+- name: vp-rbac
+  repository: https://charts.validatedpatterns.io
+  version: 0.1.2
+digest: sha256:5bf1477652e360e5567a60bfa6f267549510d40ed0c302056f65d9105442ed49
+generated: "2026-05-18T11:52:56.533569313-05:00"

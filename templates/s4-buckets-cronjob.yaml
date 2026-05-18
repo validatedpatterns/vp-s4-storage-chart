@@ -1,0 +1,18 @@
+{{- if and (not $.Values.configJob.disabled) .Values.s4Role.buckets }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "vp-s4-storage.fullname" . }}-s4-buckets
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  schedule: {{ $.Values.configJob.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          activeDeadlineSeconds: {{ $.Values.configJob.activeDeadlineSeconds }}
+          {{- include "vp-s4-storage.s4Buckets.configJobSpec" $ | nindent 10 }}
+{{- end }}

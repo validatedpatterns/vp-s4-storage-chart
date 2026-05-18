@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# Bucket provisioning playbook adapted from https://github.com/eduffy-redhat/s4-role
+# Original concept and tasks by Evan Duffy (Red Hat).
+---
+- name: Provision S4 buckets
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars/defaults.yml
+  tasks:
+    - name: "S4 Bucket {{ s4_destroy | ternary('Destroy', 'Deploy') }}"
+      amazon.aws.s3_bucket:
+        endpoint_url: "{{ s4_s4.endpointProtocol }}://{{ s4_s4.endpointAddress }}:{{ s4_s4.endpointPort }}"
+        name: "{{ item }}"
+        state: "{{ s4_destroy | ternary('absent', 'present') }}"
+        access_key: "{{ s4_s4.endpointUser }}"
+        secret_key: "{{ s4_s4.endpointPassword }}"
+        region: us-east-1
+      loop: "{{ s4_buckets }}"

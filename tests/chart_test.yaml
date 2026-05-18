@@ -1,0 +1,77 @@
+suite: vp-s4-storage chart
+release:
+  name: test-release
+  namespace: s4-test
+values:
+  - ../values.yaml
+set:
+  s4AdminCredentials.vaultKey: secret/data/hub/s4-admin-credentials
+  s4UsageCredentials.vaultKey: secret/data/hub/s4-usage-credentials
+  s4Role.buckets:
+    - demo-bucket
+  vp-rbac.serviceAccounts.vp-s4-storage-sa.namespace: s4-test
+  vp-rbac.roles.external-secrets-validator.namespace: s4-test
+
+tests:
+  - it: creates ExternalSecrets for admin and usage credentials
+    templates:
+      - templates/external-secret-s4-admin-credentials.yaml
+      - templates/external-secret-s4-usage-credentials.yaml
+    asserts:
+      - template: templates/external-secret-s4-admin-credentials.yaml
+        isKind:
+          of: ExternalSecret
+      - template: templates/external-secret-s4-admin-credentials.yaml
+        equal:
+          path: metadata.name
+          value: s4-admin-credentials
+      - template: templates/external-secret-s4-usage-credentials.yaml
+        isKind:
+          of: ExternalSecret
+      - template: templates/external-secret-s4-usage-credentials.yaml
+        equal:
+          path: metadata.name
+          value: s4-usage-credentials
+
+  - it: creates validation job when secrets are configured
+    template: templates/external-secrets-validation-job.yaml
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: vp-s4-storage-sa
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: s4-admin-credentials
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: s4-usage-credentials
+
+  - it: creates bucket provisioning Job and CronJob with bucket list
+    templates:
+      - templates/s4-buckets-bootstrap-job.yaml
+      - templates/s4-buckets-cronjob.yaml
+      - templates/s4-buckets-configmap.yaml
+    asserts:
+      - template: templates/s4-buckets-bootstrap-job.yaml
+        isKind:
+          of: Job
+      - template: templates/s4-buckets-cronjob.yaml
+        isKind:
+          of: CronJob
+      - template: templates/s4-buckets-bootstrap-job.yaml
+        equal:
+          path: spec.template.spec.containers[0].envFrom[0].secretRef.name
+          value: s4-admin-credentials
+
+  - it: skips bucket jobs when no buckets are configured
+    set:
+      s4Role.buckets: []
+    templates:
+      - templates/s4-buckets-bootstrap-job.yaml
+      - templates/s4-buckets-cronjob.yaml
+      - templates/s4-buckets-configmap.yaml
+    asserts:
+      - hasDocuments:
+          count: 0

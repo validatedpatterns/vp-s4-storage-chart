@@ -1,0 +1,17 @@
+{{- if and (not $.Values.configJob.disabled) .Values.s4Role.buckets }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "vp-s4-storage.fullname" . }}-s4-buckets-bootstrap
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 99
+  template:
+    spec:
+      activeDeadlineSeconds: {{ $.Values.configJob.activeDeadlineSeconds }}
+      {{- include "vp-s4-storage.s4Buckets.configJobSpec" $ | nindent 6 }}
+{{- end }}

@@ -5,7 +5,40 @@
 
 {{ template "chart.description" . }}
 
-This chart is used to serve as the template for Validated Patterns Charts
+Wraps the [S4](https://github.com/rh-aiservices-bu/s4) Helm chart with External Secrets for deployment credentials and imperative Jobs to provision S3 buckets.
+
+Defaults assume an OpenShift cluster: OpenShift Route for the Web UI (Ingress disabled), cluster-default StorageClass for PVCs, pinned S4 image tag, and restricted pod security contexts compatible with the `restricted-v2` SCC.
+
+## Bucket provisioning
+
+Bucket create/destroy logic is shipped as an Ansible playbook in a ConfigMap (`playbooks/s4-buckets.yml`), mounted into the [imperative-container](https://quay.io/hybridcloudpatterns/imperative-container) (ansible + `amazon.aws`). Default variables live in `vars/defaults.yml` inside the same ConfigMap; the Job and CronJob pass `s4Role.buckets`, **admin** credentials from `s4-admin-credentials`, and optional `s4Role.destroy` at runtime.
+
+The playbook and variable model were adapted from [eduffy-redhat/s4-role](https://github.com/eduffy-redhat/s4-role). **Credit to Evan Duffy (Red Hat)** for the original Ansible role and approach to managing buckets on an S4 endpoint.
+
+## Secrets (Validated Patterns)
+
+Credentials are split into **admin** and **usage** Vault secrets:
+
+| Vault / VP name | Kubernetes Secret | Purpose |
+|-----------------|---------------------|---------|
+| `s4-admin-credentials` | `s4-admin-credentials` | RGW admin keys and Web UI login; S4 Deployment and bucket Jobs |
+| `s4-usage-credentials` | `s4-usage-credentials` | Application/workload S3 access (not mounted into the S4 pod) |
+
+Admin: fixed `s4admin` access key and UI user; **generated** RGW secret and UI password (`advancedPolicy`). Usage: **generated** access key id (`basicPolicy`) and secret (`advancedPolicy`).
+
+Copy `examples/secrets/values-secret.v2.yaml` into your pattern `common/examples/secrets/` and run your pattern secrets tooling (e.g. `./scripts/make-secrets.sh`). Then point the chart at the Vault paths with a values overlay like `examples/chart-secret-values.yaml`.
+
+### `examples/secrets/values-secret.v2.yaml`
+
+```yaml
+{{ .Files.Get "examples/secrets/values-secret.v2.yaml" }}
+```
+
+### `examples/chart-secret-values.yaml`
+
+```yaml
+{{ .Files.Get "examples/chart-secret-values.yaml" }}
+```
 
 ## Notable changes
 

@@ -1,1 +1,125 @@
 ---
+# External Secrets Operator store (OpenShift Validated Patterns / Vault)
+secretStore:
+  name: vault-backend
+  kind: ClusterSecretStore
+
+# Admin credentials: S4 Deployment + bucket Jobs (see examples/secrets/values-secret.v2.yaml)
+s4AdminCredentials:
+  secretName: s4-admin-credentials
+  # Vault KV v2 path, e.g. secret/data/hub/s4-admin-credentials
+  vaultKey: "secret/data/global/s4-admin-credentials"
+  # Keys: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, UI_USERNAME, UI_PASSWORD [, JWT_SECRET]
+
+# Usage credentials: workload/application S3 consumers (separate ExternalSecret)
+s4UsageCredentials:
+  secretName: s4-usage-credentials
+  vaultKey: "secret/data/global/s4-usage-credentials"
+  # Keys: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+
+# Upstream s4 subchart (https://github.com/rh-aiservices-bu/s4) — defaults target OpenShift
+s4:
+  image:
+    repository: quay.io/rh-aiservices-bu/s4
+    # Pin to chart appVersion for reproducible OpenShift deployments (not :latest)
+    tag: "0.3.2"
+    pullPolicy: IfNotPresent
+
+  s3:
+    existingSecret: s4-admin-credentials
+
+  auth:
+    enabled: true
+    # Edge-terminated Routes present HTTPS to the browser; keep secure cookies enabled
+    cookieRequireHttps: true
+
+  storage:
+    data:
+      size: 10Gi
+      # Empty storageClass uses the cluster default StorageClass (typical on OpenShift)
+      storageClass: ""
+      accessMode: ReadWriteOnce
+    localStorage:
+      enabled: false
+
+  service:
+    type: ClusterIP
+    nodePort:
+      enabled: false
+
+  ingress:
+    enabled: false
+    s3Api:
+      enabled: false
+
+  route:
+    enabled: true
+    annotations:
+      # Allow large object uploads through the OpenShift router
+      haproxy.router.openshift.io/timeout: 600s
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+    s3Api:
+      # S3 API remains cluster-internal; clients use in-cluster Service DNS or port-forward
+      enabled: false
+
+  serviceAccount:
+    create: true
+
+  podSecurityContext:
+    runAsNonRoot: true
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+
+# S4 bucket provisioning (playbook adapted from https://github.com/eduffy-redhat/s4-role)
+s4Role:
+  # Bucket names passed into the Job/CronJob and applied via the mounted playbook
+  buckets: []
+  destroy: false
+  endpoint:
+    protocol: http
+    port: 7480
+    # Defaults to the in-cluster S4 Service DNS name when empty
+    address: ""
+
+serviceAccountName: vp-s4-storage-sa
+# Set to the target OpenShift namespace in the pattern values overlay (same as Argo CD app namespace)
+serviceAccountNamespace: ""
+
+configJob:
+  disabled: false
+  image: quay.io/hybridcloudpatterns/imperative-container:v1
+  imagePullPolicy: IfNotPresent
+  schedule: "10 */2 * * *"
+  activeDeadlineSeconds: 3600
+  configTimeout: 1800
+  s4ReadyTimeoutSeconds: 600
+
+validationJob:
+  disabled: false
+  activeDeadlineSeconds: 3600
+
+vp-rbac:
+  serviceAccounts:
+    vp-s4-storage-sa:
+      namespace: ""
+      roleBindings:
+        roles:
+          - external-secrets-validator
+        clusterRoles: []
+
+  roles:
+    external-secrets-validator:
+      namespace: ""
+      rules:
+        - apiGroups: ["external-secrets.io", ""]
+          resources: ["externalsecrets", "secrets"]
+          verbs: ["get", "list", "watch"]
