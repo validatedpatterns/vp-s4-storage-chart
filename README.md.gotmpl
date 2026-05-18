@@ -52,6 +52,37 @@ When this chart is published to [charts.validatedpatterns.io](https://charts.val
 
 Argo CD pulls `chart: vp-s4-storage` and `chartVersion: 0.1.*` from the Validated Patterns Helm repo (no `repoURL` required unless you override the default catalog URL). Use `overrides` for Vault keys, bucket lists, and optional Route hostnames. Ensure the `argoProject` you reference is listed in `clusterGroup.argoProjects`.
 
+## Configuring OpenShift Routes
+
+Routes are rendered by the upstream `s4` subchart (`charts/s4/templates/route.yaml` and `route-s3.yaml`). This wrapper passes settings under `s4.route.*` in Helm values or Argo CD `overrides`.
+
+### Helm values file
+
+Full examples (uncomment the scenario you need):
+
+```yaml
+{{ .Files.Get "examples/route-values.yaml" }}
+```
+
+### clusterGroup overrides
+
+Copy override blocks into `clusterGroup.applications.vp-s4-storage.overrides`:
+
+```yaml
+{{ .Files.Get "examples/clustergroup-route-overrides.yaml" }}
+```
+
+Typical override names:
+
+| Goal | Override |
+|------|----------|
+| Custom Web UI FQDN | `s4.route.host` |
+| Router annotation | `s4.route.annotations.haproxy\.router\.openshift\.io/timeout` |
+| External S3 API | `s4.route.s3Api.enabled`, `s4.route.s3Api.host` |
+| No Routes | `s4.route.enabled: "false"` |
+
+Rendered resources use the release namespace (e.g. `s4-storage`). The Web UI Route targets Service port `web-ui` (5000); the optional S3 Route targets `s3-api` (7480).
+
 ## Routes and FQDNs (Web UI vs S3 consumers)
 
 OpenShift defaults in this chart expose the **Web UI** on an edge-terminated Route (`s4.route.enabled: true`). The **S3 API** (port 7480) stays on a cluster-internal `ClusterIP` Service unless you enable `s4.route.s3Api`.

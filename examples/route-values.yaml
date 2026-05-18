@@ -1,0 +1,66 @@
+# Helm values examples for OpenShift Routes (s4 subchart keys under s4.route.*)
+# Use with: helm install ... -f examples/route-values.yaml
+# Or merge selected keys into a pattern values overlay / clusterGroup overrides.
+
+# -----------------------------------------------------------------------------
+# 1) Default — Web UI Route on, cluster-assigned FQDN (chart defaults)
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: true
+#     host: ""
+#     s3Api:
+#       enabled: false
+
+# -----------------------------------------------------------------------------
+# 2) Web UI — custom FQDN (DNS must point at the cluster ingress/router)
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: true
+#     host: s4.apps.mycluster.example.com
+#     tls:
+#       termination: edge
+#       insecureEdgeTerminationPolicy: Redirect
+
+# -----------------------------------------------------------------------------
+# 3) Web UI — custom FQDN + router annotations (large uploads)
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: true
+#     host: s4.apps.mycluster.example.com
+#     annotations:
+#       haproxy.router.openshift.io/timeout: 600s
+#     tls:
+#       termination: edge
+#       insecureEdgeTerminationPolicy: Redirect
+
+# -----------------------------------------------------------------------------
+# 4) Web UI + external S3 API on separate hostnames
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: true
+#     host: s4.apps.mycluster.example.com
+#     s3Api:
+#       enabled: true
+#       host: s3-s4.apps.mycluster.example.com
+#       tls:
+#         termination: edge
+#         insecureEdgeTerminationPolicy: Redirect
+
+# -----------------------------------------------------------------------------
+# 5) Disable Routes (Ingress or in-cluster / port-forward only)
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: false
+#   ingress:
+#     enabled: true
+#     className: openshift-default
+#     hosts:
+#       - host: s4.apps.mycluster.example.com
+#         paths:
+#           - path: /
+#             pathType: Prefix

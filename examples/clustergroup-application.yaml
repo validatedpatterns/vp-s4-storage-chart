@@ -36,10 +36,9 @@ clusterGroup:
           value: s4-storage
         - name: vp-rbac.roles.external-secrets-validator.namespace
           value: s4-storage
-        # Optional: pin the Web UI Route hostname instead of using the cluster-assigned FQDN
+        # Route examples (see examples/clustergroup-route-overrides.yaml and README)
         # - name: s4.route.host
         #   value: s4.apps.mycluster.example.com
-        # Optional: expose S3 API on a separate Route (see README — Routes and FQDNs)
         # - name: s4.route.s3Api.enabled
         #   value: "true"
         # - name: s4.route.s3Api.host

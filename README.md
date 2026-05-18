@@ -174,10 +174,9 @@ clusterGroup:
           value: s4-storage
         - name: vp-rbac.roles.external-secrets-validator.namespace
           value: s4-storage
-        # Optional: pin the Web UI Route hostname instead of using the cluster-assigned FQDN
+        # Route examples (see examples/clustergroup-route-overrides.yaml and README)
         # - name: s4.route.host
         #   value: s4.apps.mycluster.example.com
-        # Optional: expose S3 API on a separate Route (see README — Routes and FQDNs)
         # - name: s4.route.s3Api.enabled
         #   value: "true"
         # - name: s4.route.s3Api.host
@@ -186,6 +185,145 @@ clusterGroup:
 ```
 
 Argo CD pulls `chart: vp-s4-storage` and `chartVersion: 0.1.*` from the Validated Patterns Helm repo (no `repoURL` required unless you override the default catalog URL). Use `overrides` for Vault keys, bucket lists, and optional Route hostnames. Ensure the `argoProject` you reference is listed in `clusterGroup.argoProjects`.
+
+## Configuring OpenShift Routes
+
+Routes are rendered by the upstream `s4` subchart (`charts/s4/templates/route.yaml` and `route-s3.yaml`). This wrapper passes settings under `s4.route.*` in Helm values or Argo CD `overrides`.
+
+### Helm values file
+
+Full examples (uncomment the scenario you need):
+
+```yaml
+# Helm values examples for OpenShift Routes (s4 subchart keys under s4.route.*)
+# Use with: helm install ... -f examples/route-values.yaml
+# Or merge selected keys into a pattern values overlay / clusterGroup overrides.
+
+# -----------------------------------------------------------------------------
+# 1) Default — Web UI Route on, cluster-assigned FQDN (chart defaults)
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: true
+#     host: ""
+#     s3Api:
+#       enabled: false
+
+# -----------------------------------------------------------------------------
+# 2) Web UI — custom FQDN (DNS must point at the cluster ingress/router)
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: true
+#     host: s4.apps.mycluster.example.com
+#     tls:
+#       termination: edge
+#       insecureEdgeTerminationPolicy: Redirect
+
+# -----------------------------------------------------------------------------
+# 3) Web UI — custom FQDN + router annotations (large uploads)
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: true
+#     host: s4.apps.mycluster.example.com
+#     annotations:
+#       haproxy.router.openshift.io/timeout: 600s
+#     tls:
+#       termination: edge
+#       insecureEdgeTerminationPolicy: Redirect
+
+# -----------------------------------------------------------------------------
+# 4) Web UI + external S3 API on separate hostnames
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: true
+#     host: s4.apps.mycluster.example.com
+#     s3Api:
+#       enabled: true
+#       host: s3-s4.apps.mycluster.example.com
+#       tls:
+#         termination: edge
+#         insecureEdgeTerminationPolicy: Redirect
+
+# -----------------------------------------------------------------------------
+# 5) Disable Routes (Ingress or in-cluster / port-forward only)
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: false
+#   ingress:
+#     enabled: true
+#     className: openshift-default
+#     hosts:
+#       - host: s4.apps.mycluster.example.com
+#         paths:
+#           - path: /
+#             pathType: Prefix
+
+```
+
+### clusterGroup overrides
+
+Copy override blocks into `clusterGroup.applications.vp-s4-storage.overrides`:
+
+```yaml
+# clusterGroup overrides only — merge into clusterGroup.applications.vp-s4-storage.overrides
+# (see examples/clustergroup-application.yaml for the full application entry).
+#
+# Argo CD override names use dotted Helm value paths. Escape dots in annotation keys
+# with a backslash in the override name.
+
+# --- Web UI: cluster-assigned hostname (no overrides needed) ---
+# OpenShift sets spec.host on the Route; discover with:
+#   oc get route -n s4-storage -l app.kubernetes.io/name=s4
+
+# --- Web UI: pinned FQDN ---
+overrides_web_ui_host:
+  - name: s4.route.host
+    value: s4.apps.mycluster.example.com
+
+# --- Web UI: pinned FQDN + upload timeout annotation ---
+overrides_web_ui_host_and_annotations:
+  - name: s4.route.host
+    value: s4.apps.mycluster.example.com
+  - name: s4.route.annotations.haproxy\.router\.openshift\.io/timeout
+    value: 600s
+
+# --- External S3 API on its own Route FQDN ---
+overrides_s3_api_route:
+  - name: s4.route.s3Api.enabled
+    value: "true"
+  - name: s4.route.s3Api.host
+    value: s3-s4.apps.mycluster.example.com
+
+# --- Web UI + S3 API routes together ---
+overrides_web_ui_and_s3_api:
+  - name: s4.route.host
+    value: s4.apps.mycluster.example.com
+  - name: s4.route.s3Api.enabled
+    value: "true"
+  - name: s4.route.s3Api.host
+    value: s3-s4.apps.mycluster.example.com
+
+# --- Turn off OpenShift Routes (use Ingress or internal Service only) ---
+overrides_disable_routes:
+  - name: s4.route.enabled
+    value: "false"
+
+```
+
+Typical override names:
+
+| Goal | Override |
+|------|----------|
+| Custom Web UI FQDN | `s4.route.host` |
+| Router annotation | `s4.route.annotations.haproxy\.router\.openshift\.io/timeout` |
+| External S3 API | `s4.route.s3Api.enabled`, `s4.route.s3Api.host` |
+| No Routes | `s4.route.enabled: "false"` |
+
+Rendered resources use the release namespace (e.g. `s4-storage`). The Web UI Route targets Service port `web-ui` (5000); the optional S3 Route targets `s3-api` (7480).
 
 ## Routes and FQDNs (Web UI vs S3 consumers)
 
