@@ -174,11 +174,9 @@ clusterGroup:
           value: s4-storage
         - name: vp-rbac.roles.external-secrets-validator.namespace
           value: s4-storage
-        # Route examples (see examples/clustergroup-route-overrides.yaml and README)
+        # Optional Route hostnames (both Routes enabled by default; see examples/clustergroup-route-overrides.yaml)
         # - name: s4.route.host
         #   value: s4.apps.mycluster.example.com
-        # - name: s4.route.s3Api.enabled
-        #   value: "true"
         # - name: s4.route.s3Api.host
         #   value: s3-s4.apps.mycluster.example.com
 
@@ -200,14 +198,19 @@ Full examples (uncomment the scenario you need):
 # Or merge selected keys into a pattern values overlay / clusterGroup overrides.
 
 # -----------------------------------------------------------------------------
-# 1) Default — Web UI Route on, cluster-assigned FQDN (chart defaults)
+# 1) Default — Web UI + S3 API Routes, cluster-assigned FQDNs (chart defaults)
 # -----------------------------------------------------------------------------
 # s4:
 #   route:
 #     enabled: true
 #     host: ""
+#     annotations:
+#       haproxy.router.openshift.io/timeout: 600s
 #     s3Api:
-#       enabled: false
+#       enabled: true
+#       host: ""
+#       annotations:
+#         haproxy.router.openshift.io/timeout: 600s
 
 # -----------------------------------------------------------------------------
 # 2) Web UI — custom FQDN (DNS must point at the cluster ingress/router)
@@ -221,20 +224,7 @@ Full examples (uncomment the scenario you need):
 #       insecureEdgeTerminationPolicy: Redirect
 
 # -----------------------------------------------------------------------------
-# 3) Web UI — custom FQDN + router annotations (large uploads)
-# -----------------------------------------------------------------------------
-# s4:
-#   route:
-#     enabled: true
-#     host: s4.apps.mycluster.example.com
-#     annotations:
-#       haproxy.router.openshift.io/timeout: 600s
-#     tls:
-#       termination: edge
-#       insecureEdgeTerminationPolicy: Redirect
-
-# -----------------------------------------------------------------------------
-# 4) Web UI + external S3 API on separate hostnames
+# 3) Web UI + S3 API — custom FQDNs on both Routes
 # -----------------------------------------------------------------------------
 # s4:
 #   route:
@@ -243,9 +233,20 @@ Full examples (uncomment the scenario you need):
 #     s3Api:
 #       enabled: true
 #       host: s3-s4.apps.mycluster.example.com
+#       annotations:
+#         haproxy.router.openshift.io/timeout: 600s
 #       tls:
 #         termination: edge
 #         insecureEdgeTerminationPolicy: Redirect
+
+# -----------------------------------------------------------------------------
+# 4) S3 API internal only (Web UI Route still public)
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: true
+#     s3Api:
+#       enabled: false
 
 # -----------------------------------------------------------------------------
 # 5) Disable Routes (Ingress or in-cluster / port-forward only)
@@ -270,44 +271,41 @@ Copy override blocks into `clusterGroup.applications.vp-s4-storage.overrides`:
 
 ```yaml
 # clusterGroup overrides only — merge into clusterGroup.applications.vp-s4-storage.overrides
-# (see examples/clustergroup-application.yaml for the full application entry).
+# Chart defaults enable both Web UI and S3 API Routes (cluster-assigned FQDNs).
 #
 # Argo CD override names use dotted Helm value paths. Escape dots in annotation keys
 # with a backslash in the override name.
 
-# --- Web UI: cluster-assigned hostname (no overrides needed) ---
-# OpenShift sets spec.host on the Route; discover with:
-#   oc get route -n s4-storage -l app.kubernetes.io/name=s4
+# --- Defaults: no overrides (both Routes enabled, auto hostname) ---
 
 # --- Web UI: pinned FQDN ---
 overrides_web_ui_host:
   - name: s4.route.host
     value: s4.apps.mycluster.example.com
 
-# --- Web UI: pinned FQDN + upload timeout annotation ---
-overrides_web_ui_host_and_annotations:
+# --- S3 API: pinned FQDN ---
+overrides_s3_api_host:
+  - name: s4.route.s3Api.host
+    value: s3-s4.apps.mycluster.example.com
+
+# --- Web UI + S3 API: pinned FQDNs on both ---
+overrides_web_ui_and_s3_api_hosts:
   - name: s4.route.host
     value: s4.apps.mycluster.example.com
+  - name: s4.route.s3Api.host
+    value: s3-s4.apps.mycluster.example.com
+
+# --- Web UI: upload timeout annotation ---
+overrides_web_ui_annotation:
   - name: s4.route.annotations.haproxy\.router\.openshift\.io/timeout
     value: 600s
 
-# --- External S3 API on its own Route FQDN ---
-overrides_s3_api_route:
+# --- S3 API Route off (in-cluster Service only; Web UI Route unchanged) ---
+overrides_s3_api_internal_only:
   - name: s4.route.s3Api.enabled
-    value: "true"
-  - name: s4.route.s3Api.host
-    value: s3-s4.apps.mycluster.example.com
+    value: "false"
 
-# --- Web UI + S3 API routes together ---
-overrides_web_ui_and_s3_api:
-  - name: s4.route.host
-    value: s4.apps.mycluster.example.com
-  - name: s4.route.s3Api.enabled
-    value: "true"
-  - name: s4.route.s3Api.host
-    value: s3-s4.apps.mycluster.example.com
-
-# --- Turn off OpenShift Routes (use Ingress or internal Service only) ---
+# --- All OpenShift Routes off ---
 overrides_disable_routes:
   - name: s4.route.enabled
     value: "false"
@@ -320,58 +318,120 @@ Typical override names:
 |------|----------|
 | Custom Web UI FQDN | `s4.route.host` |
 | Router annotation | `s4.route.annotations.haproxy\.router\.openshift\.io/timeout` |
-| External S3 API | `s4.route.s3Api.enabled`, `s4.route.s3Api.host` |
+| Custom S3 API FQDN | `s4.route.s3Api.host` |
+| Disable S3 API Route | `s4.route.s3Api.enabled: "false"` |
 | No Routes | `s4.route.enabled: "false"` |
 
-Rendered resources use the release namespace (e.g. `s4-storage`). The Web UI Route targets Service port `web-ui` (5000); the optional S3 Route targets `s3-api` (7480).
+Rendered resources use the release namespace (e.g. `s4-storage`). Two Routes are created by default: Web UI (`web-ui`, port 5000) and S3 API (`s3-api`, port 7480, object name suffix `-api`).
 
 ## Routes and FQDNs (Web UI vs S3 consumers)
 
-OpenShift defaults in this chart expose the **Web UI** on an edge-terminated Route (`s4.route.enabled: true`). The **S3 API** (port 7480) stays on a cluster-internal `ClusterIP` Service unless you enable `s4.route.s3Api`.
+OpenShift defaults expose both the **Web UI** and **S3 API** on separate edge-terminated Routes (`s4.route.enabled` and `s4.route.s3Api.enabled`, both `true`). Each gets its own FQDN unless you set `s4.route.host` or `s4.route.s3Api.host`.
 
 ### Web UI (human / admin browser access)
 
 | Setting | Behavior |
 |---------|----------|
-| `s4.route.host` empty | OpenShift assigns a hostname, typically `<route-name>-<namespace>.apps.<cluster-base-domain>` (e.g. `vp-s4-storage-s4-s4-storage.apps.cluster.example.com`). |
-| `s4.route.host` set | Route uses that FQDN; use a DNS name that resolves to the cluster ingress/router. |
+| `s4.route.host` empty | OpenShift assigns a predictable hostname (see below). |
+| `s4.route.host` set | Route uses that FQDN; DNS must resolve to the cluster ingress/router. |
 | TLS | Edge termination (HTTPS at the router; HTTP to the pod). |
 
-Discover the hostname after deploy:
+### Predictable FQDNs when `host` is empty
 
-```bash
-oc get route -n s4-storage -l app.kubernetes.io/name=s4 -o jsonpath='{.items[0].spec.host}{"\n"}'
+Yes. If you do not set `s4.route.host` or `s4.route.s3Api.host`, OpenShift fills `spec.host` on each Route using the cluster ingress domain. The pattern is:
+
+```text
+<route.metadata.name>-<namespace>.<ingress-domain>
 ```
 
-Log in with **admin** credentials from `s4-admin-credentials` (`UI_USERNAME` / `UI_PASSWORD`). This FQDN is for the S4 web application, not for S3 SDK/CLI traffic.
+**Step 1 — Route object names (from Helm, before apply)**
+
+The `s4` subchart names routes from `s4.fullname`:
+
+| Route | `metadata.name` |
+|-------|-----------------|
+| Web UI | `{s4.fullname}` |
+| S3 API | `{s4.fullname}-api` |
+
+`{s4.fullname}` is computed as:
+
+- `s4.fullnameOverride` if set, else
+- `Release.Name` if it **contains** the substring `s4`, else
+- `{Release.Name}-s4`
+
+For a typical Validated Patterns app (`name: vp-s4-storage`, Argo CD release `vp-s4-storage`), `Release.Name` contains `s4`, so:
+
+| Resource | Name |
+|----------|------|
+| Web UI Route | `vp-s4-storage` |
+| S3 API Route | `vp-s4-storage-api` |
+| Service (in-cluster S3) | `vp-s4-storage` |
+
+If your release name does not contain `s4` (e.g. release `storage`), use `storage-s4` and `storage-s4-api` instead.
+
+**Step 2 — Ingress domain (cluster constant)**
+
+```bash
+oc get ingresses.config cluster -o jsonpath='{.status.domain}{"\n"}'
+```
+
+Example output: `apps.ocp4.example.com` (varies per cluster; set by install or `Ingress.config.openshift.io`).
+
+**Step 3 — Assemble the FQDN**
+
+With namespace `s4-storage` and ingress domain `apps.ocp4.example.com`:
+
+```text
+Web UI:  vp-s4-storage-s4-storage.apps.ocp4.example.com
+S3 API:  vp-s4-storage-api-s4-storage.apps.ocp4.example.com
+```
+
+Template:
+
+```text
+https://{route-name}-{namespace}.{ingress-domain}    # Web UI or S3 Route (edge TLS)
+http://{s4.fullname}.{namespace}.svc:7480          # in-cluster S3 only
+```
+
+After deploy, confirm:
+
+```bash
+INGRESS_DOMAIN=$(oc get ingresses.config cluster -o jsonpath='{.status.domain}')
+NS=s4-storage
+echo "Web UI:  vp-s4-storage-${NS}.${INGRESS_DOMAIN}"
+echo "S3 API:  vp-s4-storage-api-${NS}.${INGRESS_DOMAIN}"
+
+oc get route -n "${NS}" -l app.kubernetes.io/name=s4 -o custom-columns=NAME:.metadata.name,HOST:.spec.host
+```
+
+Log in to the Web UI with **admin** credentials from `s4-admin-credentials` (`UI_USERNAME` / `UI_PASSWORD`). Do not use the Web UI Route URL as an S3 endpoint.
 
 ### S3 / bucket access (applications and automation)
 
-Workloads that read and write **buckets** should use the **in-cluster S3 endpoint**, not the Web UI Route FQDN:
+Use credentials from **`s4-usage-credentials`** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), region `us-east-1`. Buckets in `s4Role.buckets` are created by the chart Job/CronJob with **admin** credentials; consumers use **usage** credentials.
+
+**In-cluster** (typical for pods on the same cluster):
 
 ```text
-http://<s4-service-name>.<namespace>.svc:<s3-port>
+http://vp-s4-storage.s4-storage.svc:7480
 ```
-
-With default naming (release `vp-s4-storage`, namespace `s4-storage`):
-
-```text
-http://vp-s4-storage-s4.s4-storage.svc:7480
-```
-
-Use credentials from the **`s4-usage-credentials`** Kubernetes Secret (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), region `us-east-1`, and path-style or virtual-hosted access as your SDK requires. Buckets listed in `s4Role.buckets` are created by the chart’s Job/CronJob using **admin** credentials; applications then consume them with **usage** credentials at the internal endpoint above.
-
-Example AWS CLI (from a pod in the same cluster):
 
 ```bash
 export AWS_ACCESS_KEY_ID=$(oc get secret s4-usage-credentials -n s4-storage -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)
 export AWS_SECRET_ACCESS_KEY=$(oc get secret s4-usage-credentials -n s4-storage -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)
-aws --endpoint-url http://vp-s4-storage-s4.s4-storage.svc:7480 s3 ls
+aws --endpoint-url http://vp-s4-storage.s4-storage.svc:7480 s3 ls
 ```
 
-### Optional: external S3 Route
+**Outside the cluster** (default chart also creates an S3 API Route):
 
-To expose the S3 API outside the cluster (e.g. developers on VPN without cluster network access), set `s4.route.s3Api.enabled: true` and optionally `s4.route.s3Api.host`. Clients then use `https://<s3-route-fqdn>` as `--endpoint-url`. This is disabled by default because it widens the attack surface; pair with network policy and strong usage credentials.
+Use the S3 Route FQDN (`{s4.fullname}-api` Route) with HTTPS:
+
+```bash
+S3_HOST=$(oc get route vp-s4-storage-api -n s4-storage -o jsonpath='{.spec.host}')
+aws --endpoint-url "https://${S3_HOST}" s3 ls
+```
+
+Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.example.com`) in values or clusterGroup overrides. Restrict access with network policy and **usage** credentials; the S3 Route exposes the API outside the cluster.
 
 ## Notable changes
 
@@ -410,7 +470,10 @@ To expose the S3 API outside the cluster (e.g. developers on VPN without cluster
 | s4.podSecurityContext.runAsNonRoot | bool | `true` |  |
 | s4.route.annotations."haproxy.router.openshift.io/timeout" | string | `"600s"` |  |
 | s4.route.enabled | bool | `true` |  |
-| s4.route.s3Api.enabled | bool | `false` |  |
+| s4.route.s3Api.annotations."haproxy.router.openshift.io/timeout" | string | `"600s"` |  |
+| s4.route.s3Api.enabled | bool | `true` |  |
+| s4.route.s3Api.tls.insecureEdgeTerminationPolicy | string | `"Redirect"` |  |
+| s4.route.s3Api.tls.termination | string | `"edge"` |  |
 | s4.route.tls.insecureEdgeTerminationPolicy | string | `"Redirect"` |  |
 | s4.route.tls.termination | string | `"edge"` |  |
 | s4.s3.existingSecret | string | `"s4-admin-credentials"` |  |

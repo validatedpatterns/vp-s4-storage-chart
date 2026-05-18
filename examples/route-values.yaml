@@ -3,14 +3,19 @@
 # Or merge selected keys into a pattern values overlay / clusterGroup overrides.
 
 # -----------------------------------------------------------------------------
-# 1) Default — Web UI Route on, cluster-assigned FQDN (chart defaults)
+# 1) Default — Web UI + S3 API Routes, cluster-assigned FQDNs (chart defaults)
 # -----------------------------------------------------------------------------
 # s4:
 #   route:
 #     enabled: true
 #     host: ""
+#     annotations:
+#       haproxy.router.openshift.io/timeout: 600s
 #     s3Api:
-#       enabled: false
+#       enabled: true
+#       host: ""
+#       annotations:
+#         haproxy.router.openshift.io/timeout: 600s
 
 # -----------------------------------------------------------------------------
 # 2) Web UI — custom FQDN (DNS must point at the cluster ingress/router)
@@ -24,20 +29,7 @@
 #       insecureEdgeTerminationPolicy: Redirect
 
 # -----------------------------------------------------------------------------
-# 3) Web UI — custom FQDN + router annotations (large uploads)
-# -----------------------------------------------------------------------------
-# s4:
-#   route:
-#     enabled: true
-#     host: s4.apps.mycluster.example.com
-#     annotations:
-#       haproxy.router.openshift.io/timeout: 600s
-#     tls:
-#       termination: edge
-#       insecureEdgeTerminationPolicy: Redirect
-
-# -----------------------------------------------------------------------------
-# 4) Web UI + external S3 API on separate hostnames
+# 3) Web UI + S3 API — custom FQDNs on both Routes
 # -----------------------------------------------------------------------------
 # s4:
 #   route:
@@ -46,9 +38,20 @@
 #     s3Api:
 #       enabled: true
 #       host: s3-s4.apps.mycluster.example.com
+#       annotations:
+#         haproxy.router.openshift.io/timeout: 600s
 #       tls:
 #         termination: edge
 #         insecureEdgeTerminationPolicy: Redirect
+
+# -----------------------------------------------------------------------------
+# 4) S3 API internal only (Web UI Route still public)
+# -----------------------------------------------------------------------------
+# s4:
+#   route:
+#     enabled: true
+#     s3Api:
+#       enabled: false
 
 # -----------------------------------------------------------------------------
 # 5) Disable Routes (Ingress or in-cluster / port-forward only)

@@ -61,8 +61,12 @@ s4:
       termination: edge
       insecureEdgeTerminationPolicy: Redirect
     s3Api:
-      # S3 API remains cluster-internal; clients use in-cluster Service DNS or port-forward
-      enabled: false
+      enabled: true
+      annotations:
+        haproxy.router.openshift.io/timeout: 600s
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
 
   serviceAccount:
     create: true

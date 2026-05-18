@@ -36,10 +36,8 @@ clusterGroup:
           value: s4-storage
         - name: vp-rbac.roles.external-secrets-validator.namespace
           value: s4-storage
-        # Route examples (see examples/clustergroup-route-overrides.yaml and README)
+        # Optional Route hostnames (both Routes enabled by default; see examples/clustergroup-route-overrides.yaml)
         # - name: s4.route.host
         #   value: s4.apps.mycluster.example.com
-        # - name: s4.route.s3Api.enabled
-        #   value: "true"
         # - name: s4.route.s3Api.host
         #   value: s3-s4.apps.mycluster.example.com

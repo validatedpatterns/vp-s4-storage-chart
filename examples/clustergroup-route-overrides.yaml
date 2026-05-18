@@ -1,42 +1,39 @@
 # clusterGroup overrides only — merge into clusterGroup.applications.vp-s4-storage.overrides
-# (see examples/clustergroup-application.yaml for the full application entry).
+# Chart defaults enable both Web UI and S3 API Routes (cluster-assigned FQDNs).
 #
 # Argo CD override names use dotted Helm value paths. Escape dots in annotation keys
 # with a backslash in the override name.
 
-# --- Web UI: cluster-assigned hostname (no overrides needed) ---
-# OpenShift sets spec.host on the Route; discover with:
-#   oc get route -n s4-storage -l app.kubernetes.io/name=s4
+# --- Defaults: no overrides (both Routes enabled, auto hostname) ---
 
 # --- Web UI: pinned FQDN ---
 overrides_web_ui_host:
   - name: s4.route.host
     value: s4.apps.mycluster.example.com
 
-# --- Web UI: pinned FQDN + upload timeout annotation ---
-overrides_web_ui_host_and_annotations:
+# --- S3 API: pinned FQDN ---
+overrides_s3_api_host:
+  - name: s4.route.s3Api.host
+    value: s3-s4.apps.mycluster.example.com
+
+# --- Web UI + S3 API: pinned FQDNs on both ---
+overrides_web_ui_and_s3_api_hosts:
   - name: s4.route.host
     value: s4.apps.mycluster.example.com
+  - name: s4.route.s3Api.host
+    value: s3-s4.apps.mycluster.example.com
+
+# --- Web UI: upload timeout annotation ---
+overrides_web_ui_annotation:
   - name: s4.route.annotations.haproxy\.router\.openshift\.io/timeout
     value: 600s
 
-# --- External S3 API on its own Route FQDN ---
-overrides_s3_api_route:
+# --- S3 API Route off (in-cluster Service only; Web UI Route unchanged) ---
+overrides_s3_api_internal_only:
   - name: s4.route.s3Api.enabled
-    value: "true"
-  - name: s4.route.s3Api.host
-    value: s3-s4.apps.mycluster.example.com
+    value: "false"
 
-# --- Web UI + S3 API routes together ---
-overrides_web_ui_and_s3_api:
-  - name: s4.route.host
-    value: s4.apps.mycluster.example.com
-  - name: s4.route.s3Api.enabled
-    value: "true"
-  - name: s4.route.s3Api.host
-    value: s3-s4.apps.mycluster.example.com
-
-# --- Turn off OpenShift Routes (use Ingress or internal Service only) ---
+# --- All OpenShift Routes off ---
 overrides_disable_routes:
   - name: s4.route.enabled
     value: "false"
