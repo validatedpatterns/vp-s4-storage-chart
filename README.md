@@ -129,6 +129,112 @@ s4UsageCredentials:
 
 ```
 
+## Validated Patterns clusterGroup
+
+When this chart is published to [charts.validatedpatterns.io](https://charts.validatedpatterns.io), add a namespace and Argo CD application under `clusterGroup` in your hub or site values (same style as other `vp-*` catalog charts):
+
+### `examples/clustergroup-application.yaml`
+
+```yaml
+# Example clusterGroup fragment for a Validated Patterns hub (or site) values file.
+# Assumes vp-s4-storage is published on https://charts.validatedpatterns.io
+# (same catalog as vp-rbac, aap-config, vp-stakater-reloader, etc.).
+#
+# Merge into values-global.yaml / values-hub.yaml under clusterGroup:.
+# Run secrets tooling first (see examples/secrets/values-secret.v2.yaml).
+
+clusterGroup:
+  namespaces:
+    - s4-storage
+
+  # argoProject must already be listed in clusterGroup.argoProjects
+  argoProjects:
+    - hub
+
+  applications:
+    vp-s4-storage:
+      name: vp-s4-storage
+      namespace: s4-storage
+      argoProject: hub
+      chart: vp-s4-storage
+      chartVersion: 0.1.*
+      overrides:
+        # Vault paths from examples/secrets/values-secret.v2.yaml (adjust prefix as needed)
+        - name: s4AdminCredentials.vaultKey
+          value: secret/data/global/s4-admin-credentials
+        - name: s4UsageCredentials.vaultKey
+          value: secret/data/global/s4-usage-credentials
+        # Bucket names for the imperative Job/CronJob playbook
+        - name: s4Role.buckets[0]
+          value: my-app-data
+        - name: s4Role.buckets[1]
+          value: my-app-logs
+        # vp-rbac Role/RoleBinding namespace must match the Argo CD app namespace
+        - name: vp-rbac.serviceAccounts.vp-s4-storage-sa.namespace
+          value: s4-storage
+        - name: vp-rbac.roles.external-secrets-validator.namespace
+          value: s4-storage
+        # Optional: pin the Web UI Route hostname instead of using the cluster-assigned FQDN
+        # - name: s4.route.host
+        #   value: s4.apps.mycluster.example.com
+        # Optional: expose S3 API on a separate Route (see README — Routes and FQDNs)
+        # - name: s4.route.s3Api.enabled
+        #   value: "true"
+        # - name: s4.route.s3Api.host
+        #   value: s3-s4.apps.mycluster.example.com
+
+```
+
+Argo CD pulls `chart: vp-s4-storage` and `chartVersion: 0.1.*` from the Validated Patterns Helm repo (no `repoURL` required unless you override the default catalog URL). Use `overrides` for Vault keys, bucket lists, and optional Route hostnames. Ensure the `argoProject` you reference is listed in `clusterGroup.argoProjects`.
+
+## Routes and FQDNs (Web UI vs S3 consumers)
+
+OpenShift defaults in this chart expose the **Web UI** on an edge-terminated Route (`s4.route.enabled: true`). The **S3 API** (port 7480) stays on a cluster-internal `ClusterIP` Service unless you enable `s4.route.s3Api`.
+
+### Web UI (human / admin browser access)
+
+| Setting | Behavior |
+|---------|----------|
+| `s4.route.host` empty | OpenShift assigns a hostname, typically `<route-name>-<namespace>.apps.<cluster-base-domain>` (e.g. `vp-s4-storage-s4-s4-storage.apps.cluster.example.com`). |
+| `s4.route.host` set | Route uses that FQDN; use a DNS name that resolves to the cluster ingress/router. |
+| TLS | Edge termination (HTTPS at the router; HTTP to the pod). |
+
+Discover the hostname after deploy:
+
+```bash
+oc get route -n s4-storage -l app.kubernetes.io/name=s4 -o jsonpath='{.items[0].spec.host}{"\n"}'
+```
+
+Log in with **admin** credentials from `s4-admin-credentials` (`UI_USERNAME` / `UI_PASSWORD`). This FQDN is for the S4 web application, not for S3 SDK/CLI traffic.
+
+### S3 / bucket access (applications and automation)
+
+Workloads that read and write **buckets** should use the **in-cluster S3 endpoint**, not the Web UI Route FQDN:
+
+```text
+http://<s4-service-name>.<namespace>.svc:<s3-port>
+```
+
+With default naming (release `vp-s4-storage`, namespace `s4-storage`):
+
+```text
+http://vp-s4-storage-s4.s4-storage.svc:7480
+```
+
+Use credentials from the **`s4-usage-credentials`** Kubernetes Secret (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), region `us-east-1`, and path-style or virtual-hosted access as your SDK requires. Buckets listed in `s4Role.buckets` are created by the chart’s Job/CronJob using **admin** credentials; applications then consume them with **usage** credentials at the internal endpoint above.
+
+Example AWS CLI (from a pod in the same cluster):
+
+```bash
+export AWS_ACCESS_KEY_ID=$(oc get secret s4-usage-credentials -n s4-storage -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)
+export AWS_SECRET_ACCESS_KEY=$(oc get secret s4-usage-credentials -n s4-storage -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)
+aws --endpoint-url http://vp-s4-storage-s4.s4-storage.svc:7480 s3 ls
+```
+
+### Optional: external S3 Route
+
+To expose the S3 API outside the cluster (e.g. developers on VPN without cluster network access), set `s4.route.s3Api.enabled: true` and optionally `s4.route.s3Api.host`. Clients then use `https://<s3-route-fqdn>` as `--endpoint-url`. This is disabled by default because it widens the attack surface; pair with network policy and strong usage credentials.
+
 ## Notable changes
 
 **Homepage:** <https://github.com/rh-aiservices-bu/s4>

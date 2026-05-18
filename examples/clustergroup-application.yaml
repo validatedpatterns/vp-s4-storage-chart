@@ -1,0 +1,46 @@
+# Example clusterGroup fragment for a Validated Patterns hub (or site) values file.
+# Assumes vp-s4-storage is published on https://charts.validatedpatterns.io
+# (same catalog as vp-rbac, aap-config, vp-stakater-reloader, etc.).
+#
+# Merge into values-global.yaml / values-hub.yaml under clusterGroup:.
+# Run secrets tooling first (see examples/secrets/values-secret.v2.yaml).
+
+clusterGroup:
+  namespaces:
+    - s4-storage
+
+  # argoProject must already be listed in clusterGroup.argoProjects
+  argoProjects:
+    - hub
+
+  applications:
+    vp-s4-storage:
+      name: vp-s4-storage
+      namespace: s4-storage
+      argoProject: hub
+      chart: vp-s4-storage
+      chartVersion: 0.1.*
+      overrides:
+        # Vault paths from examples/secrets/values-secret.v2.yaml (adjust prefix as needed)
+        - name: s4AdminCredentials.vaultKey
+          value: secret/data/global/s4-admin-credentials
+        - name: s4UsageCredentials.vaultKey
+          value: secret/data/global/s4-usage-credentials
+        # Bucket names for the imperative Job/CronJob playbook
+        - name: s4Role.buckets[0]
+          value: my-app-data
+        - name: s4Role.buckets[1]
+          value: my-app-logs
+        # vp-rbac Role/RoleBinding namespace must match the Argo CD app namespace
+        - name: vp-rbac.serviceAccounts.vp-s4-storage-sa.namespace
+          value: s4-storage
+        - name: vp-rbac.roles.external-secrets-validator.namespace
+          value: s4-storage
+        # Optional: pin the Web UI Route hostname instead of using the cluster-assigned FQDN
+        # - name: s4.route.host
+        #   value: s4.apps.mycluster.example.com
+        # Optional: expose S3 API on a separate Route (see README — Routes and FQDNs)
+        # - name: s4.route.s3Api.enabled
+        #   value: "true"
+        # - name: s4.route.s3Api.host
+        #   value: s3-s4.apps.mycluster.example.com
