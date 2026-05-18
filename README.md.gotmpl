@@ -7,6 +7,8 @@
 
 Wraps the [S4](https://github.com/rh-aiservices-bu/s4) Helm chart with External Secrets for deployment credentials and imperative Jobs to provision S3 buckets.
 
+> **Not for production.** This chart deploys [S4](https://github.com/rh-aiservices-bu/s4) for development, test, and demonstration. It is not intended for production S3 object storage. For production S3 workloads on OpenShift, use the Validated Patterns **[openshift-data-foundations](https://github.com/validatedpatterns/openshift-data-foundations-chart)** chart ([ODF](https://www.redhat.com/en/technologies/cloud-computing/openshift-data-foundation) on the VP catalog: `chart: openshift-data-foundations` from [charts.validatedpatterns.io](https://charts.validatedpatterns.io)).
+
 Defaults assume an OpenShift cluster: OpenShift Route for the Web UI (Ingress disabled), cluster-default StorageClass for PVCs, pinned S4 image tag, and restricted pod security contexts compatible with the `restricted-v2` SCC.
 
 ## Bucket provisioning

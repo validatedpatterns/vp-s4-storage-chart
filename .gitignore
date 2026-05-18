@@ -3,8 +3,10 @@
 
 ### Helm ###
 # Chart dependencies
-**/charts/*.tgz
-charts/s4/
+# In this chart, we need to vendor our dependencies - at least
+# for the s4 chart. Better not to mix modes.
+#**/charts/*.tgz
+#charts/s4/
 
 ### Linux ###
 *~

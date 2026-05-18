@@ -2,8 +2,8 @@
 apiVersion: v2
 name: vp-s4-storage
 description: >-
-  Validated Patterns chart for S4 object storage with External Secrets,
-  bucket provisioning via a ConfigMap-mounted Ansible playbook, and the upstream s4 Helm chart.
+  Validated Patterns chart for non-production S4 object storage (dev/demo) with External Secrets
+  and bucket provisioning. For production S3 on OpenShift, use openshift-data-foundations (ODF).
 keywords:
   - pattern
   - s4
