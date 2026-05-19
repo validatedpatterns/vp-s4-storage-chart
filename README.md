@@ -453,7 +453,7 @@ When the Web UI Route is enabled (`consoleLink.enabled` defaults to `true`), the
 | configJob.activeDeadlineSeconds | int | `3600` |  |
 | configJob.configTimeout | int | `1800` |  |
 | configJob.disabled | bool | `false` |  |
-| configJob.image | string | `"quay.io/validatedpatterns/utility-container:v1"` |  |
+| configJob.image | string | `"quay.io/validatedpatterns/utility-container:latest"` |  |
 | configJob.imagePullPolicy | string | `"IfNotPresent"` |  |
 | configJob.s4ReadyTimeoutSeconds | int | `600` |  |
 | configJob.schedule | string | `"10 */2 * * *"` |  |
