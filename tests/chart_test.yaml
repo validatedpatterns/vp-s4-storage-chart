@@ -80,6 +80,19 @@ tests:
           path: spec.template.spec.volumes[0].configMap.items[1].path
           value: vars/defaults.yml
 
+  - it: passes full s4_s4 endpoint vars in runtime extra-vars
+    template: templates/s4-buckets-bootstrap-job.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: endpointProtocol
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: endpointAddress
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: endpointPort
+
   - it: creates bucket provisioning Job and CronJob with bucket list
     templates:
       - templates/s4-buckets-bootstrap-job.yaml
