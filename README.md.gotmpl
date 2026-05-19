@@ -13,7 +13,7 @@ Defaults assume an OpenShift cluster: OpenShift Route for the Web UI (Ingress di
 
 ## Bucket provisioning
 
-Bucket create/destroy logic is shipped as an Ansible playbook in a ConfigMap (`playbooks/s4-buckets.yml`), mounted into the [imperative-container](https://quay.io/hybridcloudpatterns/imperative-container) (ansible + `amazon.aws`). Default variables live in `vars/defaults.yml` on the mount (ConfigMap key `vars.defaults.yml`); the Job and CronJob pass `s4Role.buckets`, **`s4-credentials`**, and optional `s4Role.destroy` at runtime.
+Bucket create/destroy logic is shipped as an Ansible playbook in a ConfigMap (`playbooks/s4-buckets.yml`), mounted into the [utility-container](https://quay.io/validatedpatterns/utility-container) (ansible + `amazon.aws`). Default variables live in `vars/defaults.yml` on the mount (ConfigMap key `vars.defaults.yml`); the Job and CronJob pass `s4Role.buckets`, **`s4-credentials`**, and optional `s4Role.destroy` at runtime.
 
 The playbook and variable model were adapted from [eduffy-redhat/s4-role](https://github.com/eduffy-redhat/s4-role). **Credit to Evan Duffy (Red Hat)** for the original Ansible role and approach to managing buckets on an S4 endpoint.
 

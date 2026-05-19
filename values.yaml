@@ -104,7 +104,7 @@ serviceAccountNamespace: ""
 
 configJob:
   disabled: false
-  image: quay.io/hybridcloudpatterns/imperative-container:v1
+  image: quay.io/validatedpatterns/utility-container:v1
   imagePullPolicy: IfNotPresent
   schedule: "10 */2 * * *"
   activeDeadlineSeconds: 3600

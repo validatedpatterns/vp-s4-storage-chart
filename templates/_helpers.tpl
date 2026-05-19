@@ -85,7 +85,7 @@ In-cluster S3 API hostname for bucket provisioning.
 {{- end }}
 
 {{/*
-Shared Job/CronJob pod spec for s4-buckets playbook (imperative-container).
+Shared Job/CronJob pod spec for s4-buckets playbook (utility-container).
 */}}
 {{- define "vp-s4-storage.s4Buckets.configJobSpec" -}}
 restartPolicy: Never
