@@ -96,10 +96,10 @@ tests:
           path: spec.applicationMenu.imageURL
           pattern: ^data:image/png;base64,
 
-  - it: builds ConsoleLink href from ingress domain when route host is empty
+  - it: builds ConsoleLink href from global.localClusterDomain when route host is empty
     set:
       s4.route.host: ""
-      consoleLink.ingressDomain: apps.test.example.com
+      global.localClusterDomain: apps.test.example.com
     template: templates/consolelink.yaml
     asserts:
       - equal:
@@ -109,7 +109,7 @@ tests:
   - it: skips ConsoleLink when Web UI route is disabled
     set:
       s4.route.enabled: false
-      consoleLink.ingressDomain: apps.test.example.com
+      global.localClusterDomain: apps.test.example.com
     template: templates/consolelink.yaml
     asserts:
       - hasDocuments:
@@ -118,6 +118,7 @@ tests:
   - it: skips ConsoleLink when href cannot be determined
     set:
       s4.route.host: ""
+      global.localClusterDomain: ""
       consoleLink.ingressDomain: ""
       consoleLink.href: ""
     template: templates/consolelink.yaml

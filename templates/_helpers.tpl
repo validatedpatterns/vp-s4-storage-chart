@@ -39,6 +39,17 @@ Match upstream s4.fullname for the s4 subchart values scope.
 {{- end }}
 
 {{/*
+Cluster ingress domain for ConsoleLink (defaults to global.localClusterDomain from values-global.yaml).
+*/}}
+{{- define "vp-s4-storage.consoleLink.ingressDomain" -}}
+{{- $global := .Values.global | default dict -}}
+{{- $domain := coalesce .Values.consoleLink.ingressDomain $global.localClusterDomain | default "" | trim -}}
+{{- if ne $domain "" -}}
+{{- $domain -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 HTTPS URL for the S4 Web UI OpenShift ConsoleLink (empty when not computable).
 */}}
 {{- define "vp-s4-storage.consoleLink.href" -}}
@@ -46,8 +57,8 @@ HTTPS URL for the S4 Web UI OpenShift ConsoleLink (empty when not computable).
 {{- trimSuffix "/" .Values.consoleLink.href -}}
 {{- else if .Values.s4.route.host -}}
 https://{{ trimSuffix "/" .Values.s4.route.host -}}
-{{- else if .Values.consoleLink.ingressDomain -}}
-https://{{ include "vp-s4-storage.s4.fullname" . }}-{{ .Release.Namespace }}.{{ .Values.consoleLink.ingressDomain -}}
+{{- else if include "vp-s4-storage.consoleLink.ingressDomain" . -}}
+https://{{ include "vp-s4-storage.s4.fullname" . }}-{{ .Release.Namespace }}.{{ include "vp-s4-storage.consoleLink.ingressDomain" . -}}
 {{- end -}}
 {{- end }}
 

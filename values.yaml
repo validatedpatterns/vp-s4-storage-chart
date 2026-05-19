@@ -116,14 +116,14 @@ validationJob:
   disabled: false
   activeDeadlineSeconds: 3600
 
-# OpenShift console Application menu link to the S4 Web UI Route (console.openshift.io/v1 ConsoleLink)
+# OpenShift console Application menu link to the S4 Web UI Route (enabled by default when the Route is enabled)
 consoleLink:
   enabled: true
   text: S4 Web UI
   section: Storage
-  # Full https URL override; otherwise uses s4.route.host or {route}-{namespace}.{ingressDomain}
+  # Full https URL override; otherwise uses s4.route.host or {route}-{namespace}.{ingress-domain}
   href: ""
-  # Cluster ingress domain when s4.route.host is empty (e.g. apps.ocp.example.com)
+  # Optional override; when empty, uses global.localClusterDomain (Validated Patterns)
   ingressDomain: ""
   # Defaults to bundled assets/s4-icon-64x64.png from https://github.com/rh-aiservices-bu/s4
   imageURL: ""

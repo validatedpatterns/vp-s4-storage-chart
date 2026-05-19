@@ -176,9 +176,12 @@ clusterGroup:
           value: s4-storage
         - name: vp-rbac.roles.external-secrets-validator.namespace
           value: s4-storage
-        # Console Application menu link (set ingress domain or route host; see consoleLink.* in values.yaml)
-        # - name: consoleLink.ingressDomain
-        #   value: apps.mycluster.example.com
+        # ConsoleLink is enabled by default; href uses global.localClusterDomain from values-global.yaml
+        # from values-global.yaml (same as clustergroup Argo CD ConsoleLinks). Optional overrides:
+        # - name: consoleLink.href
+        #   value: https://s4.apps.mycluster.example.com
+        # - name: s4.route.host
+        #   value: s4.apps.mycluster.example.com
         # Optional Route hostnames (both Routes enabled by default; see examples/clustergroup-route-overrides.yaml)
         # - name: s4.route.host
         #   value: s4.apps.mycluster.example.com
@@ -454,7 +457,7 @@ Default `s4.route.s3Api.tls.insecureEdgeTerminationPolicy` is `Allow` so the S3 
 
 ### OpenShift ConsoleLink (Web UI)
 
-When the Web UI Route is enabled, the chart creates a cluster `ConsoleLink` in the console **Application menu** (`consoleLink.section: Storage`). Set `s4.route.host`, `consoleLink.href`, or `consoleLink.ingressDomain` (with an empty route host) so `spec.href` is a valid `https://` URL. The icon is the 64×64 PNG from [rh-aiservices-bu/s4](https://github.com/rh-aiservices-bu/s4) (`assets/s4-icon-64x64.png`), bundled in the chart as a data URI unless `consoleLink.imageURL` is set.
+When the Web UI Route is enabled (`consoleLink.enabled` defaults to `true`), the chart creates a cluster `ConsoleLink` in the console **Application menu** (`consoleLink.section: Storage`), matching the Validated Patterns clustergroup style used for Argo CD (`common/clustergroup/templates/plumbing/argocd.yaml`) and Vault ConsoleLinks. The `spec.href` URL is `s4.route.host` when set, else `https://{route}-{namespace}.{ingress-domain}` with `ingress-domain` from `coalesce(consoleLink.ingressDomain, global.localClusterDomain)` — `global.localClusterDomain` is set by the pattern framework in `values-global.yaml`. Override with `consoleLink.href` if needed. Set `consoleLink.enabled: false` to disable. The icon is the 64×64 PNG from [rh-aiservices-bu/s4](https://github.com/rh-aiservices-bu/s4) (`assets/s4-icon-64x64.png`), bundled in the chart as a data URI unless `consoleLink.imageURL` is set.
 
 **Homepage:** <https://github.com/rh-aiservices-bu/s4>
 
