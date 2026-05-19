@@ -151,7 +151,7 @@ containers:
             -e @"${runtime_vars}"
     envFrom:
       - secretRef:
-          name: {{ $.Values.s4AdminCredentials.secretName | quote }}
+          name: {{ $.Values.s4Credentials.secretName | quote }}
     volumeMounts:
       - name: playbook
         mountPath: /pattern-home/playbook

@@ -4,18 +4,11 @@ secretStore:
   name: vault-backend
   kind: ClusterSecretStore
 
-# Admin credentials: S4 Deployment + bucket Jobs (see examples/secrets/values-secret.v2.yaml)
-s4AdminCredentials:
-  secretName: s4-admin-credentials
-  # Vault KV v2 path, e.g. secret/data/hub/s4-admin-credentials
-  vaultKey: "secret/data/global/s4-admin-credentials"
-  # Keys: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, UI_USERNAME, UI_PASSWORD [, JWT_SECRET]
-
-# Usage credentials: workload/application S3 consumers (separate ExternalSecret)
-s4UsageCredentials:
-  secretName: s4-usage-credentials
-  vaultKey: "secret/data/global/s4-usage-credentials"
-  # Keys: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+# Web UI + S3 API credentials (one Vault secret → one Kubernetes Secret for the s4 subchart)
+s4Credentials:
+  secretName: s4-credentials
+  vaultKey: "secret/data/global/s4-credentials"
+  # Keys: UI_USERNAME, UI_PASSWORD [, JWT_SECRET], AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 # Upstream s4 subchart (https://github.com/rh-aiservices-bu/s4) — defaults target OpenShift
 s4:
@@ -26,7 +19,7 @@ s4:
     pullPolicy: IfNotPresent
 
   s3:
-    existingSecret: s4-admin-credentials
+    existingSecret: s4-credentials
 
   auth:
     enabled: true

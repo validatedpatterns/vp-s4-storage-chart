@@ -13,22 +13,24 @@ Defaults assume an OpenShift cluster: OpenShift Route for the Web UI (Ingress di
 
 ## Bucket provisioning
 
-Bucket create/destroy logic is shipped as an Ansible playbook in a ConfigMap (`playbooks/s4-buckets.yml`), mounted into the [imperative-container](https://quay.io/hybridcloudpatterns/imperative-container) (ansible + `amazon.aws`). Default variables live in `vars/defaults.yml` inside the same ConfigMap; the Job and CronJob pass `s4Role.buckets`, **admin** credentials from `s4-admin-credentials`, and optional `s4Role.destroy` at runtime.
+Bucket create/destroy logic is shipped as an Ansible playbook in a ConfigMap (`playbooks/s4-buckets.yml`), mounted into the [imperative-container](https://quay.io/hybridcloudpatterns/imperative-container) (ansible + `amazon.aws`). Default variables live in `vars/defaults.yml` inside the same ConfigMap; the Job and CronJob pass `s4Role.buckets`, **`s4-credentials`**, and optional `s4Role.destroy` at runtime.
 
 The playbook and variable model were adapted from [eduffy-redhat/s4-role](https://github.com/eduffy-redhat/s4-role). **Credit to Evan Duffy (Red Hat)** for the original Ansible role and approach to managing buckets on an S4 endpoint.
 
 ## Secrets (Validated Patterns)
 
-Credentials are split into **admin** and **usage** Vault secrets:
+One Vault secret and one Kubernetes Secret (**`s4-credentials`**) supply everything the upstream `s4` subchart expects:
 
-| Vault / VP name | Kubernetes Secret | Purpose |
-|-----------------|---------------------|---------|
-| `s4-admin-credentials` | `s4-admin-credentials` | RGW admin keys and Web UI login; S4 Deployment and bucket Jobs |
-| `s4-usage-credentials` | `s4-usage-credentials` | Application/workload S3 access (not mounted into the S4 pod) |
+| Access path | Keys in `s4-credentials` |
+|-------------|--------------------------|
+| **Web UI** | `UI_USERNAME`, `UI_PASSWORD` [, `JWT_SECRET`] |
+| **S3 API** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
 
-Admin: fixed `s4admin` access key and UI user; **generated** RGW secret and UI password (`advancedPolicy`). Usage: **generated** access key id (`basicPolicy`) and secret (`advancedPolicy`).
+External Secrets Operator syncs `s4Credentials.vaultKey` into `s4Credentials.secretName` (default `s4-credentials`). That secret is passed to the `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The same S3 keys serve the RGW endpoint, provisioning, and application clients.
 
-Copy `examples/secrets/values-secret.v2.yaml` into your pattern `common/examples/secrets/` and run your pattern secrets tooling (e.g. `./scripts/make-secrets.sh`). Then point the chart at the Vault paths with a values overlay like `examples/chart-secret-values.yaml`.
+Default examples use `s4admin` for the UI user and S3 access key id; the UI password and RGW secret are **generated** (`advancedPolicy`).
+
+Copy `examples/secrets/values-secret.v2.yaml` into your pattern `common/examples/secrets/` and run your pattern secrets tooling (e.g. `./scripts/make-secrets.sh`). Then point the chart at the Vault path with a values overlay like `examples/chart-secret-values.yaml`.
 
 ### `examples/secrets/values-secret.v2.yaml`
 
@@ -166,11 +168,11 @@ echo "S3 API:  vp-s4-storage-api-${NS}.${INGRESS_DOMAIN}"
 oc get route -n "${NS}" -l app.kubernetes.io/name=s4 -o custom-columns=NAME:.metadata.name,HOST:.spec.host
 ```
 
-Log in to the Web UI with **admin** credentials from `s4-admin-credentials` (`UI_USERNAME` / `UI_PASSWORD`). Do not use the Web UI Route URL as an S3 endpoint.
+Log in to the Web UI with **`s4-credentials`** (`UI_USERNAME` / `UI_PASSWORD`). Do not use the Web UI Route URL as an S3 endpoint.
 
 ### S3 / bucket access (applications and automation)
 
-Use credentials from **`s4-usage-credentials`** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), region `us-east-1`. Buckets in `s4Role.buckets` are created by the chart Job/CronJob with **admin** credentials; consumers use **usage** credentials.
+Use the S3 keys in **`s4-credentials`** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), region `us-east-1`. The same secret backs the RGW process, bucket Jobs (`s4Role.buckets`), and application clients.
 
 **In-cluster** (typical for pods on the same cluster):
 
@@ -179,8 +181,8 @@ http://vp-s4-storage.s4-storage.svc:7480
 ```
 
 ```bash
-export AWS_ACCESS_KEY_ID=$(oc get secret s4-usage-credentials -n s4-storage -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)
-export AWS_SECRET_ACCESS_KEY=$(oc get secret s4-usage-credentials -n s4-storage -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)
+export AWS_ACCESS_KEY_ID=$(oc get secret s4-credentials -n s4-storage -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)
+export AWS_SECRET_ACCESS_KEY=$(oc get secret s4-credentials -n s4-storage -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)
 aws --endpoint-url http://vp-s4-storage.s4-storage.svc:7480 s3 ls
 ```
 
@@ -194,13 +196,13 @@ aws --endpoint-url "http://${S3_HOST}" s3 ls
 # or: aws --endpoint-url "https://${S3_HOST}" s3 ls
 ```
 
-Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.example.com`) in values or clusterGroup overrides. Set `s4.route.s3Api.tls.insecureEdgeTerminationPolicy: Redirect` to force HTTPS only. Restrict access with network policy and **usage** credentials; the S3 Route exposes the API outside the cluster.
+Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.example.com`) in values or clusterGroup overrides. Set `s4.route.s3Api.tls.insecureEdgeTerminationPolicy: Redirect` to force HTTPS only. Restrict access with network policy; the S3 Route exposes the API outside the cluster.
 
 ## Notable changes
 
 ### Argo CD sync wave ordering
 
-Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "2"` on S4 subchart resources (Deployment, Service, PVC, and related objects). Umbrella-chart resources keep their existing waves: ExternalSecrets and the validation Job at **1**, bucket ConfigMap at **2**, bootstrap Job at **3**, CronJob at **5**. That ensures admin credentials exist before the S4 Deployment starts and the bootstrap Job still runs after the workload is up.
+Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "2"` on S4 subchart resources (Deployment, Service, PVC, and related objects). Umbrella-chart resources keep their existing waves: ExternalSecrets and the validation Job at **1**, bucket ConfigMap at **2**, bootstrap Job at **3**, CronJob at **5**. That ensures credentials exist before the S4 Deployment starts and the bootstrap Job still runs after the workload is up.
 
 ### S3 API Route HTTP (port 80)
 
