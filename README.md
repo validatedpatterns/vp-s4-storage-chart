@@ -1,6 +1,6 @@
 # vp-s4-storage
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square)
 
 Validated Patterns chart for non-production S4 object storage (dev/demo) with External Secrets and bucket provisioning. For production S3 on OpenShift, use openshift-data-foundations (ODF).
 
@@ -129,10 +129,10 @@ clusterGroup:
   applications:
     vp-s4-storage:
       name: vp-s4-storage
-      namespace: s4-storage
+      namespace: vp-s4-storage
       argoProject: hub
       chart: vp-s4-storage
-      chartVersion: 0.1.*
+      chartVersion: 0.2.*
       overrides:
         # Vault paths from examples/secrets/values-secret.v2.yaml (adjust prefix as needed)
         - name: s4UICredentials.vaultKey
@@ -146,9 +146,9 @@ clusterGroup:
           value: my-app-logs
         # vp-rbac Role/RoleBinding namespace must match the Argo CD app namespace
         - name: vp-rbac.serviceAccounts.vp-s4-storage-sa.namespace
-          value: s4-storage
+          value: vp-s4-storage
         - name: vp-rbac.roles.external-secrets-validator.namespace
-          value: s4-storage
+          value: vp-s4-storage
         # ConsoleLink is enabled by default; href uses global.localClusterDomain from values-global.yaml
         # from values-global.yaml (same as clustergroup Argo CD ConsoleLinks). Optional overrides:
         # - name: consoleLink.href
