@@ -36,6 +36,9 @@ clusterGroup:
           value: s4-storage
         - name: vp-rbac.roles.external-secrets-validator.namespace
           value: s4-storage
+        # Console Application menu link (set ingress domain or route host; see consoleLink.* in values.yaml)
+        # - name: consoleLink.ingressDomain
+        #   value: apps.mycluster.example.com
         # Optional Route hostnames (both Routes enabled by default; see examples/clustergroup-route-overrides.yaml)
         # - name: s4.route.host
         #   value: s4.apps.mycluster.example.com

@@ -1,0 +1,16 @@
+{{- $href := include "vp-s4-storage.consoleLink.href" . -}}
+{{- if and .Values.consoleLink.enabled .Values.s4.route.enabled $href }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleLink
+metadata:
+  name: {{ printf "%s-%s-webui" (include "vp-s4-storage.fullname" .) .Release.Namespace | trunc 63 | trimSuffix "-" }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  href: {{ $href | quote }}
+  location: ApplicationMenu
+  text: {{ .Values.consoleLink.text | quote }}
+  applicationMenu:
+    section: {{ .Values.consoleLink.section | quote }}
+    imageURL: {{ include "vp-s4-storage.consoleLink.imageURL" . | quote }}
+{{- end }}

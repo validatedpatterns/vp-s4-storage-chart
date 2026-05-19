@@ -176,6 +176,9 @@ clusterGroup:
           value: s4-storage
         - name: vp-rbac.roles.external-secrets-validator.namespace
           value: s4-storage
+        # Console Application menu link (set ingress domain or route host; see consoleLink.* in values.yaml)
+        # - name: consoleLink.ingressDomain
+        #   value: apps.mycluster.example.com
         # Optional Route hostnames (both Routes enabled by default; see examples/clustergroup-route-overrides.yaml)
         # - name: s4.route.host
         #   value: s4.apps.mycluster.example.com
@@ -449,6 +452,10 @@ Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "2"` on S4 su
 
 Default `s4.route.s3Api.tls.insecureEdgeTerminationPolicy` is `Allow` so the S3 API Route serves HTTP on port 80 as well as HTTPS on port 443. The Web UI Route remains `Redirect` (HTTP to HTTPS).
 
+### OpenShift ConsoleLink (Web UI)
+
+When the Web UI Route is enabled, the chart creates a cluster `ConsoleLink` in the console **Application menu** (`consoleLink.section: Storage`). Set `s4.route.host`, `consoleLink.href`, or `consoleLink.ingressDomain` (with an empty route host) so `spec.href` is a valid `https://` URL. The icon is the 64×64 PNG from [rh-aiservices-bu/s4](https://github.com/rh-aiservices-bu/s4) (`assets/s4-icon-64x64.png`), bundled in the chart as a data URI unless `consoleLink.imageURL` is set.
+
 **Homepage:** <https://github.com/rh-aiservices-bu/s4>
 
 ## Source Code
@@ -474,6 +481,12 @@ Default `s4.route.s3Api.tls.insecureEdgeTerminationPolicy` is `Allow` so the S3 
 | configJob.imagePullPolicy | string | `"IfNotPresent"` |  |
 | configJob.s4ReadyTimeoutSeconds | int | `600` |  |
 | configJob.schedule | string | `"10 */2 * * *"` |  |
+| consoleLink.enabled | bool | `true` |  |
+| consoleLink.href | string | `""` |  |
+| consoleLink.imageURL | string | `""` |  |
+| consoleLink.ingressDomain | string | `""` |  |
+| consoleLink.section | string | `"Storage"` |  |
+| consoleLink.text | string | `"S4 Web UI"` |  |
 | s4.auth.cookieRequireHttps | bool | `true` |  |
 | s4.auth.enabled | bool | `true` |  |
 | s4.commonAnnotations."argocd.argoproj.io/sync-wave" | string | `"2"` |  |

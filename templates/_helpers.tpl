@@ -39,6 +39,30 @@ Match upstream s4.fullname for the s4 subchart values scope.
 {{- end }}
 
 {{/*
+HTTPS URL for the S4 Web UI OpenShift ConsoleLink (empty when not computable).
+*/}}
+{{- define "vp-s4-storage.consoleLink.href" -}}
+{{- if .Values.consoleLink.href -}}
+{{- trimSuffix "/" .Values.consoleLink.href -}}
+{{- else if .Values.s4.route.host -}}
+https://{{ trimSuffix "/" .Values.s4.route.host -}}
+{{- else if .Values.consoleLink.ingressDomain -}}
+https://{{ include "vp-s4-storage.s4.fullname" . }}-{{ .Release.Namespace }}.{{ .Values.consoleLink.ingressDomain -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+ConsoleLink application menu icon (bundled PNG from rh-aiservices-bu/s4 unless overridden).
+*/}}
+{{- define "vp-s4-storage.consoleLink.imageURL" -}}
+{{- if .Values.consoleLink.imageURL -}}
+{{- .Values.consoleLink.imageURL -}}
+{{- else -}}
+data:image/png;base64,{{ .Files.Get "files/s4-icon-64x64.png" | b64enc }}
+{{- end -}}
+{{- end }}
+
+{{/*
 In-cluster S3 API hostname for bucket provisioning.
 */}}
 {{- define "vp-s4-storage.s4.endpointAddress" -}}

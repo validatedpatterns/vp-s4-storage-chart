@@ -206,6 +206,10 @@ Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "2"` on S4 su
 
 Default `s4.route.s3Api.tls.insecureEdgeTerminationPolicy` is `Allow` so the S3 API Route serves HTTP on port 80 as well as HTTPS on port 443. The Web UI Route remains `Redirect` (HTTP to HTTPS).
 
+### OpenShift ConsoleLink (Web UI)
+
+When the Web UI Route is enabled, the chart creates a cluster `ConsoleLink` in the console **Application menu** (`consoleLink.section: Storage`). Set `s4.route.host`, `consoleLink.href`, or `consoleLink.ingressDomain` (with an empty route host) so `spec.href` is a valid `https://` URL. The icon is the 64×64 PNG from [rh-aiservices-bu/s4](https://github.com/rh-aiservices-bu/s4) (`assets/s4-icon-64x64.png`), bundled in the chart as a data URI unless `consoleLink.imageURL` is set.
+
 {{ template "chart.homepageLine" . }}
 
 {{ template "chart.maintainersSection" . }}
