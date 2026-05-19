@@ -58,6 +58,28 @@ tests:
           path: spec.template.spec.containers[0].command[2]
           pattern: EXTERNAL_SECRET="s4-credentials"
 
+  - it: creates bucket ConfigMap with valid data keys
+    template: templates/s4-buckets-configmap.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - exists:
+          path: data["s4-buckets.yml"]
+      - exists:
+          path: data["vars.defaults.yml"]
+      - notExists:
+          path: data["vars/defaults.yml"]
+
+  - it: mounts playbook files with directory layout via volume items
+    template: templates/s4-buckets-bootstrap-job.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0].configMap.items[0].path
+          value: s4-buckets.yml
+      - equal:
+          path: spec.template.spec.volumes[0].configMap.items[1].path
+          value: vars/defaults.yml
+
   - it: creates bucket provisioning Job and CronJob with bucket list
     templates:
       - templates/s4-buckets-bootstrap-job.yaml

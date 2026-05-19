@@ -9,6 +9,6 @@ metadata:
 data:
   s4-buckets.yml: |
 {{ .Files.Get "playbooks/s4-buckets.yml" | indent 4 }}
-  vars/defaults.yml: |
+  vars.defaults.yml: |
 {{ tpl (.Files.Get "playbooks/vars/defaults.yml.tpl") . | indent 4 }}
 {{- end }}

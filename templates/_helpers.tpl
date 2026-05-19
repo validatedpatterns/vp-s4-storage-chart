@@ -94,6 +94,11 @@ volumes:
   - name: playbook
     configMap:
       name: {{ include "vp-s4-storage.fullname" $ }}-s4-buckets-playbook
+      items:
+        - key: s4-buckets.yml
+          path: s4-buckets.yml
+        - key: vars.defaults.yml
+          path: vars/defaults.yml
 initContainers:
   - name: wait-for-s4
     image: {{ $.Values.configJob.image }}
