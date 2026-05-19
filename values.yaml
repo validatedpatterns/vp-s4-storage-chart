@@ -4,11 +4,17 @@ secretStore:
   name: vault-backend
   kind: ClusterSecretStore
 
-# Web UI + S3 API credentials (one Vault secret → one Kubernetes Secret for the s4 subchart)
+# Merged Kubernetes Secret for the unmodified s4 subchart (UI + API keys from two Vault paths)
 s4Credentials:
   secretName: s4-credentials
-  vaultKey: "secret/data/global/s4-credentials"
-  # Keys: UI_USERNAME, UI_PASSWORD [, JWT_SECRET], AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+
+# Vault: Web UI login (UI_USERNAME, UI_PASSWORD [, JWT_SECRET])
+s4UICredentials:
+  vaultKey: "secret/data/global/s4-ui-credentials"
+
+# Vault: S3 API (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) — RGW, bucket Jobs, app consumers
+s4APICredentials:
+  vaultKey: "secret/data/global/s4-api-credentials"
 
 # Upstream s4 subchart (https://github.com/rh-aiservices-bu/s4) — defaults target OpenShift
 s4:

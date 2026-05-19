@@ -19,18 +19,18 @@ The playbook and variable model were adapted from [eduffy-redhat/s4-role](https:
 
 ## Secrets (Validated Patterns)
 
-One Vault secret and one Kubernetes Secret (**`s4-credentials`**) supply everything the upstream `s4` subchart expects:
+S4 has two access paths, stored in **two Vault secrets** and merged into **one Kubernetes Secret** for the upstream `s4` subchart (no subchart changes):
 
-| Access path | Keys in `s4-credentials` |
-|-------------|--------------------------|
-| **Web UI** | `UI_USERNAME`, `UI_PASSWORD` [, `JWT_SECRET`] |
-| **S3 API** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| Access path | Keys | Vault secret (example) |
+|-------------|------|------------------------|
+| **Web UI** | `UI_USERNAME`, `UI_PASSWORD` [, `JWT_SECRET`] | `s4-ui-credentials` |
+| **S3 API** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `s4-api-credentials` |
 
-External Secrets Operator syncs `s4Credentials.vaultKey` into `s4Credentials.secretName` (default `s4-credentials`). That secret is passed to the `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The same S3 keys serve the RGW endpoint, provisioning, and application clients.
+External Secrets Operator syncs both Vault paths into Kubernetes secret **`s4-credentials`** (`s4Credentials.secretName`, `creationPolicy: Owner` then `Merge`). That merged secret is passed to the unmodified `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The API Vault path is the RGW identity for the endpoint, provisioning, and application consumers.
 
-Default examples use `s4admin` for the UI user and S3 access key id; the UI password and RGW secret are **generated** (`advancedPolicy`).
+Default examples use `s4admin` for the UI user and S3 access key id; the UI password and API secret key are **generated** (`advancedPolicy`).
 
-Copy `examples/secrets/values-secret.v2.yaml` into your pattern `common/examples/secrets/` and run your pattern secrets tooling (e.g. `./scripts/make-secrets.sh`). Then point the chart at the Vault path with a values overlay like `examples/chart-secret-values.yaml`.
+Copy `examples/secrets/values-secret.v2.yaml` into your pattern `common/examples/secrets/` and run your pattern secrets tooling (e.g. `./scripts/make-secrets.sh`). Then point the chart at the Vault paths with a values overlay like `examples/chart-secret-values.yaml`.
 
 ### `examples/secrets/values-secret.v2.yaml`
 

@@ -18,18 +18,18 @@ The playbook and variable model were adapted from [eduffy-redhat/s4-role](https:
 
 ## Secrets (Validated Patterns)
 
-One Vault secret and one Kubernetes Secret (**`s4-credentials`**) supply everything the upstream `s4` subchart expects:
+S4 has two access paths, stored in **two Vault secrets** and merged into **one Kubernetes Secret** for the upstream `s4` subchart (no subchart changes):
 
-| Access path | Keys in `s4-credentials` |
-|-------------|--------------------------|
-| **Web UI** | `UI_USERNAME`, `UI_PASSWORD` [, `JWT_SECRET`] |
-| **S3 API** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| Access path | Keys | Vault secret (example) |
+|-------------|------|------------------------|
+| **Web UI** | `UI_USERNAME`, `UI_PASSWORD` [, `JWT_SECRET`] | `s4-ui-credentials` |
+| **S3 API** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `s4-api-credentials` |
 
-External Secrets Operator syncs `s4Credentials.vaultKey` into `s4Credentials.secretName` (default `s4-credentials`). That secret is passed to the `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The same S3 keys serve the RGW endpoint, provisioning, and application clients.
+External Secrets Operator syncs both Vault paths into Kubernetes secret **`s4-credentials`** (`s4Credentials.secretName`, `creationPolicy: Owner` then `Merge`). That merged secret is passed to the unmodified `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The API Vault path is the RGW identity for the endpoint, provisioning, and application consumers.
 
-Default examples use `s4admin` for the UI user and S3 access key id; the UI password and RGW secret are **generated** (`advancedPolicy`).
+Default examples use `s4admin` for the UI user and S3 access key id; the UI password and API secret key are **generated** (`advancedPolicy`).
 
-Copy `examples/secrets/values-secret.v2.yaml` into your pattern `common/examples/secrets/` and run your pattern secrets tooling (e.g. `./scripts/make-secrets.sh`). Then point the chart at the Vault path with a values overlay like `examples/chart-secret-values.yaml`.
+Copy `examples/secrets/values-secret.v2.yaml` into your pattern `common/examples/secrets/` and run your pattern secrets tooling (e.g. `./scripts/make-secrets.sh`). Then point the chart at the Vault paths with a values overlay like `examples/chart-secret-values.yaml`.
 
 ### `examples/secrets/values-secret.v2.yaml`
 
@@ -40,8 +40,8 @@ Copy `examples/secrets/values-secret.v2.yaml` into your pattern `common/examples
 # Use from your pattern repo with the secrets tooling, e.g.:
 #   ./scripts/make-secrets.sh -f common/examples/secrets/values-secret.v2.yaml
 #
-# One Vault secret (Web UI login + S3 API keys) → Kubernetes Secret s4-credentials.
-# Wire the Vault path into the chart via examples/chart-secret-values.yaml.
+# Two Vault secrets (Web UI vs S3 API) merge into Kubernetes Secret s4-credentials.
+# Wire Vault paths into the chart via examples/chart-secret-values.yaml.
 
 version: "2.0"
 backingStore: vault
@@ -61,7 +61,7 @@ vaultPolicies:
     rule "charset" { charset = "!@#$%^&*" min-chars = 1 }
 
 secrets:
-  - name: s4-credentials
+  - name: s4-ui-credentials
     vaultPrefixes:
       - global
     fields:
@@ -72,6 +72,11 @@ secrets:
         onMissingValue: generate
         override: true
         vaultPolicy: advancedPolicy
+
+  - name: s4-api-credentials
+    vaultPrefixes:
+      - global
+    fields:
       - name: AWS_ACCESS_KEY_ID
         value: s4admin
         onMissingValue: error
@@ -86,12 +91,16 @@ secrets:
 
 ```yaml
 # Overlay for vp-s4-storage after running pattern secrets tooling.
-# Adjust vaultKey to match your hub/site prefix (global, cluster, etc.).
+# Adjust vaultKey paths to match your hub/site prefix (global, cluster, etc.).
 #
-#   secret/data/global/s4-credentials
+#   secret/data/global/s4-ui-credentials
+#   secret/data/global/s4-api-credentials
 
-s4Credentials:
-  vaultKey: secret/data/global/s4-credentials
+s4UICredentials:
+  vaultKey: secret/data/global/s4-ui-credentials
+
+s4APICredentials:
+  vaultKey: secret/data/global/s4-api-credentials
 
 ```
 
@@ -126,8 +135,10 @@ clusterGroup:
       chartVersion: 0.1.*
       overrides:
         # Vault paths from examples/secrets/values-secret.v2.yaml (adjust prefix as needed)
-        - name: s4Credentials.vaultKey
-          value: secret/data/global/s4-credentials
+        - name: s4UICredentials.vaultKey
+          value: secret/data/global/s4-ui-credentials
+        - name: s4APICredentials.vaultKey
+          value: secret/data/global/s4-api-credentials
         # Bucket names for the imperative Job/CronJob playbook
         - name: s4Role.buckets[0]
           value: my-app-data
@@ -481,13 +492,14 @@ When the Web UI Route is enabled (`consoleLink.enabled` defaults to `true`), the
 | s4.storage.data.size | string | `"10Gi"` |  |
 | s4.storage.data.storageClass | string | `""` |  |
 | s4.storage.localStorage.enabled | bool | `false` |  |
+| s4APICredentials.vaultKey | string | `"secret/data/global/s4-api-credentials"` |  |
 | s4Credentials.secretName | string | `"s4-credentials"` |  |
-| s4Credentials.vaultKey | string | `"secret/data/global/s4-credentials"` |  |
 | s4Role.buckets | list | `[]` |  |
 | s4Role.destroy | bool | `false` |  |
 | s4Role.endpoint.address | string | `""` |  |
 | s4Role.endpoint.port | int | `7480` |  |
 | s4Role.endpoint.protocol | string | `"http"` |  |
+| s4UICredentials.vaultKey | string | `"secret/data/global/s4-ui-credentials"` |  |
 | secretStore.kind | string | `"ClusterSecretStore"` |  |
 | secretStore.name | string | `"vault-backend"` |  |
 | serviceAccountName | string | `"vp-s4-storage-sa"` |  |

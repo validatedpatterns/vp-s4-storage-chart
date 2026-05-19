@@ -22,8 +22,10 @@ clusterGroup:
       chartVersion: 0.1.*
       overrides:
         # Vault paths from examples/secrets/values-secret.v2.yaml (adjust prefix as needed)
-        - name: s4Credentials.vaultKey
-          value: secret/data/global/s4-credentials
+        - name: s4UICredentials.vaultKey
+          value: secret/data/global/s4-ui-credentials
+        - name: s4APICredentials.vaultKey
+          value: secret/data/global/s4-api-credentials
         # Bucket names for the imperative Job/CronJob playbook
         - name: s4Role.buckets[0]
           value: my-app-data

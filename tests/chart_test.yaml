@@ -5,24 +5,55 @@ release:
 values:
   - ../values.yaml
 set:
-  s4Credentials.vaultKey: secret/data/hub/s4-credentials
+  s4UICredentials.vaultKey: secret/data/hub/s4-ui-credentials
+  s4APICredentials.vaultKey: secret/data/hub/s4-api-credentials
   s4Role.buckets:
     - demo-bucket
   vp-rbac.serviceAccounts.vp-s4-storage-sa.namespace: s4-test
   vp-rbac.roles.external-secrets-validator.namespace: s4-test
 
 tests:
-  - it: creates ExternalSecret for s4 credentials
-    template: templates/external-secret-s4-credentials.yaml
+  - it: creates ExternalSecrets for UI and API credentials
+    templates:
+      - templates/external-secret-s4-ui-credentials.yaml
+      - templates/external-secret-s4-api-credentials.yaml
     asserts:
-      - isKind:
+      - template: templates/external-secret-s4-ui-credentials.yaml
+        isKind:
           of: ExternalSecret
-      - equal:
+      - template: templates/external-secret-s4-ui-credentials.yaml
+        equal:
           path: metadata.name
-          value: s4-credentials
-      - equal:
+          value: s4-ui-credentials
+      - template: templates/external-secret-s4-ui-credentials.yaml
+        equal:
           path: spec.target.name
           value: s4-credentials
+      - template: templates/external-secret-s4-ui-credentials.yaml
+        equal:
+          path: spec.target.creationPolicy
+          value: Owner
+      - template: templates/external-secret-s4-api-credentials.yaml
+        equal:
+          path: metadata.name
+          value: s4-api-credentials
+      - template: templates/external-secret-s4-api-credentials.yaml
+        equal:
+          path: spec.target.name
+          value: s4-credentials
+      - template: templates/external-secret-s4-api-credentials.yaml
+        equal:
+          path: spec.target.creationPolicy
+          value: Merge
+
+  - it: uses Owner creationPolicy for API when UI vault path is unset
+    set:
+      s4UICredentials.vaultKey: ""
+    template: templates/external-secret-s4-api-credentials.yaml
+    asserts:
+      - equal:
+          path: spec.target.creationPolicy
+          value: Owner
 
   - it: creates validation job when credentials are configured
     template: templates/external-secrets-validation-job.yaml
@@ -34,7 +65,7 @@ tests:
           value: vp-s4-storage-sa
       - matchRegex:
           path: spec.template.spec.containers[0].command[2]
-          pattern: s4-credentials
+          pattern: s4-ui-credentials
 
   - it: creates bucket provisioning Job and CronJob with bucket list
     templates:
@@ -70,6 +101,15 @@ tests:
       - templates/s4-buckets-bootstrap-job.yaml
       - templates/s4-buckets-cronjob.yaml
       - templates/s4-buckets-configmap.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: skips validation job when no credential vault paths are set
+    set:
+      s4UICredentials.vaultKey: ""
+      s4APICredentials.vaultKey: ""
+    template: templates/external-secrets-validation-job.yaml
     asserts:
       - hasDocuments:
           count: 0
