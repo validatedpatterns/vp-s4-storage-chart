@@ -197,6 +197,10 @@ Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.exampl
 
 ## Notable changes
 
+### Argo CD sync wave ordering
+
+Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "2"` on S4 subchart resources (Deployment, Service, PVC, and related objects). Umbrella-chart resources keep their existing waves: ExternalSecrets and the validation Job at **1**, bucket ConfigMap at **2**, bootstrap Job at **3**, CronJob at **5**. That ensures admin credentials exist before the S4 Deployment starts and the bootstrap Job still runs after the workload is up.
+
 {{ template "chart.homepageLine" . }}
 
 {{ template "chart.maintainersSection" . }}

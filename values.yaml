@@ -71,6 +71,10 @@ s4:
   serviceAccount:
     create: true
 
+  # Argo CD sync order: ExternalSecrets/validation (1), bucket ConfigMap (2), S4 workload (2), bootstrap (3), CronJob (5)
+  commonAnnotations:
+    argocd.argoproj.io/sync-wave: "2"
+
   podSecurityContext:
     runAsNonRoot: true
 

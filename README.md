@@ -1,10 +1,12 @@
 # vp-s4-storage
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square)
 
-Validated Patterns chart for S4 object storage with External Secrets, bucket provisioning via a ConfigMap-mounted Ansible playbook, and the upstream s4 Helm chart.
+Validated Patterns chart for non-production S4 object storage (dev/demo) with External Secrets and bucket provisioning. For production S3 on OpenShift, use openshift-data-foundations (ODF).
 
 Wraps the [S4](https://github.com/rh-aiservices-bu/s4) Helm chart with External Secrets for deployment credentials and imperative Jobs to provision S3 buckets.
+
+> **Not for production.** This chart deploys [S4](https://github.com/rh-aiservices-bu/s4) for development, test, and demonstration. It is not intended for production S3 object storage. For production S3 workloads on OpenShift, use the Validated Patterns **[openshift-data-foundations](https://github.com/validatedpatterns/openshift-data-foundations-chart)** chart ([ODF](https://www.redhat.com/en/technologies/cloud-computing/openshift-data-foundation) on the VP catalog: `chart: openshift-data-foundations` from [charts.validatedpatterns.io](https://charts.validatedpatterns.io)).
 
 Defaults assume an OpenShift cluster: OpenShift Route for the Web UI (Ingress disabled), cluster-default StorageClass for PVCs, pinned S4 image tag, and restricted pod security contexts compatible with the `restricted-v2` SCC.
 
@@ -435,6 +437,10 @@ Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.exampl
 
 ## Notable changes
 
+### Argo CD sync wave ordering
+
+Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "2"` on S4 subchart resources (Deployment, Service, PVC, and related objects). Umbrella-chart resources keep their existing waves: ExternalSecrets and the validation Job at **1**, bucket ConfigMap at **2**, bootstrap Job at **3**, CronJob at **5**. That ensures admin credentials exist before the S4 Deployment starts and the bootstrap Job still runs after the workload is up.
+
 **Homepage:** <https://github.com/rh-aiservices-bu/s4>
 
 ## Source Code
@@ -462,6 +468,7 @@ Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.exampl
 | configJob.schedule | string | `"10 */2 * * *"` |  |
 | s4.auth.cookieRequireHttps | bool | `true` |  |
 | s4.auth.enabled | bool | `true` |  |
+| s4.commonAnnotations."argocd.argoproj.io/sync-wave" | string | `"2"` |  |
 | s4.image.pullPolicy | string | `"IfNotPresent"` |  |
 | s4.image.repository | string | `"quay.io/rh-aiservices-bu/s4"` |  |
 | s4.image.tag | string | `"0.3.2"` |  |

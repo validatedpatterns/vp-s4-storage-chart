@@ -13,7 +13,7 @@ home: https://github.com/rh-aiservices-bu/s4
 sources:
   - https://github.com/rh-aiservices-bu/s4
   - https://github.com/eduffy-redhat/s4-role
-version: 0.1.0
+version: 0.1.1
 dependencies:
   - name: s4
     version: "0.1.0"
