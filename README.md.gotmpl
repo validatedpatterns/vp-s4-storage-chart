@@ -26,7 +26,7 @@ S4 has two access paths, stored in **two Vault secrets** and merged into **one K
 | **Web UI** | `UI_USERNAME`, `UI_PASSWORD` [, `JWT_SECRET`] | `s4-ui-credentials` |
 | **S3 API** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `s4-api-credentials` |
 
-External Secrets Operator syncs both Vault paths into Kubernetes secret **`s4-credentials`** (`s4Credentials.secretName`, `creationPolicy: Owner` then `Merge`). That merged secret is passed to the unmodified `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The API Vault path is the RGW identity for the endpoint, provisioning, and application consumers.
+External Secrets Operator uses **one** `ExternalSecret` (`s4Credentials.secretName`) with two `dataFrom.extract` entries (UI and API Vault paths). That avoids `creationPolicy: Merge`, which fails if the target Secret does not exist yet when both resources reconcile in parallel. The resulting secret is passed to the unmodified `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The API Vault path is the RGW identity for the endpoint, provisioning, and application consumers.
 
 Default examples use `s4admin` for the UI user and S3 access key id; the UI password and API secret key are **generated** (`advancedPolicy`).
 

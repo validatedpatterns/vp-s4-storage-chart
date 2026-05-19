@@ -4,7 +4,7 @@ secretStore:
   name: vault-backend
   kind: ClusterSecretStore
 
-# Merged Kubernetes Secret for the unmodified s4 subchart (UI + API keys from two Vault paths)
+# Kubernetes Secret for the s4 subchart (one ExternalSecret, two Vault paths via dataFrom)
 s4Credentials:
   secretName: s4-credentials
 

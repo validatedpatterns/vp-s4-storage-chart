@@ -13,47 +13,38 @@ set:
   vp-rbac.roles.external-secrets-validator.namespace: s4-test
 
 tests:
-  - it: creates ExternalSecrets for UI and API credentials
-    templates:
-      - templates/external-secret-s4-ui-credentials.yaml
-      - templates/external-secret-s4-api-credentials.yaml
+  - it: creates one ExternalSecret with UI and API vault extracts
+    template: templates/external-secret-s4-credentials.yaml
     asserts:
-      - template: templates/external-secret-s4-ui-credentials.yaml
-        isKind:
+      - isKind:
           of: ExternalSecret
-      - template: templates/external-secret-s4-ui-credentials.yaml
-        equal:
+      - equal:
           path: metadata.name
-          value: s4-ui-credentials
-      - template: templates/external-secret-s4-ui-credentials.yaml
-        equal:
+          value: s4-credentials
+      - equal:
           path: spec.target.name
           value: s4-credentials
-      - template: templates/external-secret-s4-ui-credentials.yaml
-        equal:
-          path: spec.target.creationPolicy
-          value: Owner
-      - template: templates/external-secret-s4-api-credentials.yaml
-        equal:
-          path: metadata.name
-          value: s4-api-credentials
-      - template: templates/external-secret-s4-api-credentials.yaml
-        equal:
-          path: spec.target.name
-          value: s4-credentials
-      - template: templates/external-secret-s4-api-credentials.yaml
-        equal:
-          path: spec.target.creationPolicy
-          value: Merge
-
-  - it: uses Owner creationPolicy for API when UI vault path is unset
-    set:
-      s4UICredentials.vaultKey: ""
-    template: templates/external-secret-s4-api-credentials.yaml
-    asserts:
       - equal:
           path: spec.target.creationPolicy
           value: Owner
+      - equal:
+          path: spec.dataFrom[0].extract.key
+          value: secret/data/hub/s4-ui-credentials
+      - equal:
+          path: spec.dataFrom[1].extract.key
+          value: secret/data/hub/s4-api-credentials
+
+  - it: creates ExternalSecret with API extract only when UI vault path is unset
+    set:
+      s4UICredentials.vaultKey: ""
+    template: templates/external-secret-s4-credentials.yaml
+    asserts:
+      - equal:
+          path: spec.dataFrom[0].extract.key
+          value: secret/data/hub/s4-api-credentials
+      - lengthEqual:
+          path: spec.dataFrom
+          count: 1
 
   - it: creates validation job when credentials are configured
     template: templates/external-secrets-validation-job.yaml
@@ -65,7 +56,7 @@ tests:
           value: vp-s4-storage-sa
       - matchRegex:
           path: spec.template.spec.containers[0].command[2]
-          pattern: s4-ui-credentials
+          pattern: EXTERNAL_SECRET="s4-credentials"
 
   - it: creates bucket provisioning Job and CronJob with bucket list
     templates:
@@ -110,6 +101,15 @@ tests:
       s4UICredentials.vaultKey: ""
       s4APICredentials.vaultKey: ""
     template: templates/external-secrets-validation-job.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: skips ExternalSecret when no credential vault paths are set
+    set:
+      s4UICredentials.vaultKey: ""
+      s4APICredentials.vaultKey: ""
+    template: templates/external-secret-s4-credentials.yaml
     asserts:
       - hasDocuments:
           count: 0
