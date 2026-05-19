@@ -16,6 +16,9 @@
 #       host: ""
 #       annotations:
 #         haproxy.router.openshift.io/timeout: 600s
+#       tls:
+#         termination: edge
+#         insecureEdgeTerminationPolicy: Allow  # HTTP :80 and HTTPS :443
 
 # -----------------------------------------------------------------------------
 # 2) Web UI — custom FQDN (DNS must point at the cluster ingress/router)
@@ -42,7 +45,7 @@
 #         haproxy.router.openshift.io/timeout: 600s
 #       tls:
 #         termination: edge
-#         insecureEdgeTerminationPolicy: Redirect
+#         insecureEdgeTerminationPolicy: Allow  # or Redirect for HTTPS-only
 
 # -----------------------------------------------------------------------------
 # 4) S3 API internal only (Web UI Route still public)

@@ -213,6 +213,9 @@ Full examples (uncomment the scenario you need):
 #       host: ""
 #       annotations:
 #         haproxy.router.openshift.io/timeout: 600s
+#       tls:
+#         termination: edge
+#         insecureEdgeTerminationPolicy: Allow  # HTTP :80 and HTTPS :443
 
 # -----------------------------------------------------------------------------
 # 2) Web UI — custom FQDN (DNS must point at the cluster ingress/router)
@@ -239,7 +242,7 @@ Full examples (uncomment the scenario you need):
 #         haproxy.router.openshift.io/timeout: 600s
 #       tls:
 #         termination: edge
-#         insecureEdgeTerminationPolicy: Redirect
+#         insecureEdgeTerminationPolicy: Allow  # or Redirect for HTTPS-only
 
 # -----------------------------------------------------------------------------
 # 4) S3 API internal only (Web UI Route still public)
@@ -426,20 +429,25 @@ aws --endpoint-url http://vp-s4-storage.s4-storage.svc:7480 s3 ls
 
 **Outside the cluster** (default chart also creates an S3 API Route):
 
-Use the S3 Route FQDN (`{s4.fullname}-api` Route) with HTTPS:
+The S3 API Route defaults to `s4.route.s3Api.tls.insecureEdgeTerminationPolicy: Allow`, so clients can use **HTTP on port 80** or **HTTPS on port 443** (edge termination). The Web UI Route still redirects HTTP to HTTPS (`Redirect`).
 
 ```bash
 S3_HOST=$(oc get route vp-s4-storage-api -n s4-storage -o jsonpath='{.spec.host}')
-aws --endpoint-url "https://${S3_HOST}" s3 ls
+aws --endpoint-url "http://${S3_HOST}" s3 ls
+# or: aws --endpoint-url "https://${S3_HOST}" s3 ls
 ```
 
-Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.example.com`) in values or clusterGroup overrides. Restrict access with network policy and **usage** credentials; the S3 Route exposes the API outside the cluster.
+Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.example.com`) in values or clusterGroup overrides. Set `s4.route.s3Api.tls.insecureEdgeTerminationPolicy: Redirect` to force HTTPS only. Restrict access with network policy and **usage** credentials; the S3 Route exposes the API outside the cluster.
 
 ## Notable changes
 
 ### Argo CD sync wave ordering
 
 Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "2"` on S4 subchart resources (Deployment, Service, PVC, and related objects). Umbrella-chart resources keep their existing waves: ExternalSecrets and the validation Job at **1**, bucket ConfigMap at **2**, bootstrap Job at **3**, CronJob at **5**. That ensures admin credentials exist before the S4 Deployment starts and the bootstrap Job still runs after the workload is up.
+
+### S3 API Route HTTP (port 80)
+
+Default `s4.route.s3Api.tls.insecureEdgeTerminationPolicy` is `Allow` so the S3 API Route serves HTTP on port 80 as well as HTTPS on port 443. The Web UI Route remains `Redirect` (HTTP to HTTPS).
 
 **Homepage:** <https://github.com/rh-aiservices-bu/s4>
 
@@ -479,7 +487,7 @@ Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "2"` on S4 su
 | s4.route.enabled | bool | `true` |  |
 | s4.route.s3Api.annotations."haproxy.router.openshift.io/timeout" | string | `"600s"` |  |
 | s4.route.s3Api.enabled | bool | `true` |  |
-| s4.route.s3Api.tls.insecureEdgeTerminationPolicy | string | `"Redirect"` |  |
+| s4.route.s3Api.tls.insecureEdgeTerminationPolicy | string | `"Allow"` |  |
 | s4.route.s3Api.tls.termination | string | `"edge"` |  |
 | s4.route.tls.insecureEdgeTerminationPolicy | string | `"Redirect"` |  |
 | s4.route.tls.termination | string | `"edge"` |  |

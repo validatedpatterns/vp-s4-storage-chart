@@ -66,7 +66,8 @@ s4:
         haproxy.router.openshift.io/timeout: 600s
       tls:
         termination: edge
-        insecureEdgeTerminationPolicy: Redirect
+        # Allow HTTP on router port 80 (HTTPS on 443 still available with edge termination)
+        insecureEdgeTerminationPolicy: Allow
 
   serviceAccount:
     create: true
