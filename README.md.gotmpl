@@ -7,13 +7,22 @@
 
 Wraps the [S4](https://github.com/rh-aiservices-bu/s4) Helm chart with External Secrets for deployment credentials and imperative Jobs to provision S3 buckets.
 
-> **Not for production.** This chart deploys [S4](https://github.com/rh-aiservices-bu/s4) for development, test, and demonstration. It is not intended for production S3 object storage. For production S3 workloads on OpenShift, use the Validated Patterns **[openshift-data-foundations](https://github.com/validatedpatterns/openshift-data-foundations-chart)** chart ([ODF](https://www.redhat.com/en/technologies/cloud-computing/openshift-data-foundation) on the VP catalog: `chart: openshift-data-foundations` from [charts.validatedpatterns.io](https://charts.validatedpatterns.io)).
+> **Not for production.** This chart deploys [S4](https://github.com/rh-aiservices-bu/s4) for development,
+> test, and demonstration. It is not intended for production S3 object storage. For production S3
+> workloads on OpenShift, use the Validated Patterns
+> **[openshift-data-foundations](https://github.com/validatedpatterns/openshift-data-foundations-chart)**
+> chart ([ODF](https://www.redhat.com/en/technologies/cloud-computing/openshift-data-foundation) on the
+> VP catalog: `chart: openshift-data-foundations` from
+> [charts.validatedpatterns.io](https://charts.validatedpatterns.io)).
 
 Defaults assume an OpenShift cluster: OpenShift Route for the Web UI (Ingress disabled), cluster-default StorageClass for PVCs, pinned S4 image tag, and restricted pod security contexts compatible with the `restricted-v2` SCC.
 
 ## Bucket provisioning
 
-Bucket create/destroy logic is shipped as an Ansible playbook in a ConfigMap (`playbooks/s4-buckets.yml`), mounted into the [utility-container](https://quay.io/validatedpatterns/utility-container) (ansible + `amazon.aws`). Default variables live in `vars/defaults.yml` on the mount (ConfigMap key `vars.defaults.yml`); the Job and CronJob pass `s4Role.buckets`, **`s4-credentials`**, and optional `s4Role.destroy` at runtime.
+Bucket create/destroy logic is shipped as an Ansible playbook in a ConfigMap (`playbooks/s4-buckets.yml`),
+mounted into the [utility-container](https://quay.io/validatedpatterns/utility-container) (ansible +
+`amazon.aws`). Default variables live in `vars/defaults.yml` on the mount (ConfigMap key `vars.defaults.yml`);
+the Job and CronJob pass `s4Role.buckets`, **`s4-credentials`**, and optional `s4Role.destroy` at runtime.
 
 The playbook and variable model were adapted from [eduffy-redhat/s4-role](https://github.com/eduffy-redhat/s4-role). **Credit to Evan Duffy (Red Hat)** for the original Ansible role and approach to managing buckets on an S4 endpoint.
 
@@ -26,7 +35,11 @@ S4 has two access paths, stored in **two Vault secrets** and merged into **one K
 | **Web UI**  | `UI_USERNAME`, `UI_PASSWORD` [, `JWT_SECRET`] | `s4-ui-credentials`    |
 | **S3 API**  | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`  | `s4-api-credentials`   |
 
-External Secrets Operator uses **one** `ExternalSecret` (`s4Credentials.secretName`) with two `dataFrom.extract` entries (UI and API Vault paths). That avoids `creationPolicy: Merge`, which fails if the target Secret does not exist yet when both resources reconcile in parallel. The resulting secret is passed to the unmodified `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The API Vault path is the RGW identity for the endpoint, provisioning, and application consumers.
+External Secrets Operator uses **one** `ExternalSecret` (`s4Credentials.secretName`) with two
+`dataFrom.extract` entries (UI and API Vault paths). That avoids `creationPolicy: Merge`, which fails
+if the target Secret does not exist yet when both resources reconcile in parallel. The resulting secret
+is passed to the unmodified `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The API
+Vault path is the RGW identity for the endpoint, provisioning, and application consumers.
 
 Default examples use `s4admin` for the UI user and S3 access key id; the UI password and API secret key are **generated** (`advancedPolicy`).
 
@@ -210,7 +223,12 @@ Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.exampl
 
 ### Argo CD sync wave ordering
 
-Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "3"` on S4 subchart resources (Deployment, Service, PVC, and related objects). Umbrella-chart resources: ExternalSecrets at **1**, validation Job at **2** (Argo Sync hook with `HookSucceeded,BeforeHookCreation`), bucket ConfigMap and ConsoleLink at **3**, bootstrap Job at **4**, CronJob at **5**. That applies ExternalSecrets before validation runs, recreates a failed validation Job on each sync retry, keeps the S4 Deployment behind credentials, and still runs bootstrap after the workload is up.
+Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "3"` on S4 subchart resources
+(Deployment, Service, PVC, and related objects). Umbrella-chart resources: ExternalSecrets at **1**,
+validation Job at **2** (Argo Sync hook with `HookSucceeded,BeforeHookCreation`), bucket ConfigMap and
+ConsoleLink at **3**, bootstrap Job at **4**, CronJob at **5**. That applies ExternalSecrets before
+validation runs, recreates a failed validation Job on each sync retry, keeps the S4 Deployment behind
+credentials, and still runs bootstrap after the workload is up.
 
 ### S3 API Route HTTP (port 80)
 
@@ -218,7 +236,16 @@ Default `s4.route.s3Api.tls.insecureEdgeTerminationPolicy` is `Allow` so the S3 
 
 ### OpenShift ConsoleLink (Web UI)
 
-When the Web UI Route is enabled (`consoleLink.enabled` defaults to `true`), the chart creates a cluster `ConsoleLink` in the console **Application menu** (`consoleLink.section: Storage`), matching the Validated Patterns clustergroup style used for Argo CD (`common/clustergroup/templates/plumbing/argocd.yaml`) and Vault ConsoleLinks. The `spec.href` URL is `s4.route.host` when set, else `https://{route}-{namespace}.{ingress-domain}` with `ingress-domain` from `coalesce(consoleLink.ingressDomain, global.localClusterDomain)` — `global.localClusterDomain` is set by the pattern framework in `values-global.yaml`. Override with `consoleLink.href` if needed. Set `consoleLink.enabled: false` to disable. The icon is the 64×64 PNG from [rh-aiservices-bu/s4](https://github.com/rh-aiservices-bu/s4) (`assets/s4-icon-64x64.png`), bundled in the chart as a data URI unless `consoleLink.imageURL` is set.
+When the Web UI Route is enabled (`consoleLink.enabled` defaults to `true`), the chart creates a cluster
+`ConsoleLink` in the console **Application menu** (`consoleLink.section: Storage`), matching the Validated
+Patterns clustergroup style used for Argo CD (`common/clustergroup/templates/plumbing/argocd.yaml`) and
+Vault ConsoleLinks. The `spec.href` URL is `s4.route.host` when set, else
+`https://{route}-{namespace}.{ingress-domain}` with `ingress-domain` from
+`coalesce(consoleLink.ingressDomain, global.localClusterDomain)` —
+`global.localClusterDomain` is set by the pattern framework in `values-global.yaml`. Override with
+`consoleLink.href` if needed. Set `consoleLink.enabled: false` to disable. The icon is the 64×64 PNG from
+[rh-aiservices-bu/s4](https://github.com/rh-aiservices-bu/s4) (`assets/s4-icon-64x64.png`), bundled in the
+chart as a data URI unless `consoleLink.imageURL` is set.
 
 {{ template "chart.homepageLine" . }}
 
@@ -226,8 +253,10 @@ When the Web UI Route is enabled (`consoleLink.enabled` defaults to `true`), the
 
 {{ template "chart.sourcesSection" . }}
 
+<!-- markdownlint-disable MD034 -->
 {{ template "chart.requirementsSection" . }}
 
 {{ template "chart.valuesSection" . }}
+<!-- markdownlint-restore -->
 
 {{ template "helm-docs.versionFooter" . }}
