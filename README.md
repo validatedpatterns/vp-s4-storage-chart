@@ -1,6 +1,6 @@
 # vp-s4-storage
 
-![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square)
+![Version: 0.2.1](https://img.shields.io/badge/Version-0.2.1-informational?style=flat-square)
 
 Validated Patterns chart for non-production S4 object storage (dev/demo) with External Secrets and bucket provisioning. For production S3 on OpenShift, use openshift-data-foundations (ODF).
 
@@ -163,7 +163,7 @@ clusterGroup:
 
 ```
 
-Argo CD pulls `chart: vp-s4-storage` and `chartVersion: 0.1.*` from the Validated Patterns Helm repo (no `repoURL` required unless you override the default catalog URL). Use `overrides` for Vault keys, bucket lists, and optional Route hostnames. Ensure the `argoProject` you reference is listed in `clusterGroup.argoProjects`.
+Argo CD pulls `chart: vp-s4-storage` and `chartVersion: 0.2.*` from the Validated Patterns Helm repo (no `repoURL` required unless you override the default catalog URL). Use `overrides` for Vault keys, bucket lists, and optional Route hostnames. Ensure the `argoProject` you reference is listed in `clusterGroup.argoProjects`.
 
 ## Configuring OpenShift Routes
 
@@ -420,9 +420,17 @@ Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.exampl
 
 ## Notable changes
 
+* v0.2.1: Fix External Secrets validation so a late Secret is not missed after a
+long Failed Job. Add configurable `validationJob.backoffLimit` (default 20) and
+reduce `validationJob.activeDeadlineSeconds` to 600 (10 min). Run the validation
+job as an Argo Sync hook at sync-wave 2 with `HookSucceeded,BeforeHookCreation`
+so ExternalSecrets apply in wave 1 before validation runs and each sync retry
+gets a fresh job. Shift S4 workload, bucket ConfigMap, and ConsoleLink to wave 3
+and the bootstrap Job to wave 4 so the Deployment still waits for credentials.
+
 ### Argo CD sync wave ordering
 
-Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "2"` on S4 subchart resources (Deployment, Service, PVC, and related objects). Umbrella-chart resources keep their existing waves: ExternalSecrets and the validation Job at **1**, bucket ConfigMap at **2**, bootstrap Job at **3**, CronJob at **5**. That ensures credentials exist before the S4 Deployment starts and the bootstrap Job still runs after the workload is up.
+Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "3"` on S4 subchart resources (Deployment, Service, PVC, and related objects). Umbrella-chart resources: ExternalSecrets at **1**, validation Job at **2** (Argo Sync hook with `HookSucceeded,BeforeHookCreation`), bucket ConfigMap and ConsoleLink at **3**, bootstrap Job at **4**, CronJob at **5**. That applies ExternalSecrets before validation runs, recreates a failed validation Job on each sync retry, keeps the S4 Deployment behind credentials, and still runs bootstrap after the workload is up.
 
 ### S3 API Route HTTP (port 80)
 
@@ -465,7 +473,7 @@ When the Web UI Route is enabled (`consoleLink.enabled` defaults to `true`), the
 | consoleLink.text | string | `"S4 Web UI"` |  |
 | s4.auth.cookieRequireHttps | bool | `true` |  |
 | s4.auth.enabled | bool | `true` |  |
-| s4.commonAnnotations."argocd.argoproj.io/sync-wave" | string | `"2"` |  |
+| s4.commonAnnotations."argocd.argoproj.io/sync-wave" | string | `"3"` |  |
 | s4.image.pullPolicy | string | `"IfNotPresent"` |  |
 | s4.image.repository | string | `"quay.io/rh-aiservices-bu/s4"` |  |
 | s4.image.tag | string | `"0.3.2"` |  |
@@ -504,7 +512,8 @@ When the Web UI Route is enabled (`consoleLink.enabled` defaults to `true`), the
 | secretStore.name | string | `"vault-backend"` |  |
 | serviceAccountName | string | `"vp-s4-storage-sa"` |  |
 | serviceAccountNamespace | string | `""` |  |
-| validationJob.activeDeadlineSeconds | int | `3600` |  |
+| validationJob.activeDeadlineSeconds | int | `600` |  |
+| validationJob.backoffLimit | int | `20` |  |
 | validationJob.disabled | bool | `false` |  |
 | vp-rbac.roles.external-secrets-validator.namespace | string | `""` |  |
 | vp-rbac.roles.external-secrets-validator.rules[0].apiGroups[0] | string | `"external-secrets.io"` |  |

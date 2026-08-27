@@ -54,7 +54,7 @@ When this chart is published to [charts.validatedpatterns.io](https://charts.val
 {{ .Files.Get "examples/clustergroup-application.yaml" }}
 ```
 
-Argo CD pulls `chart: vp-s4-storage` and `chartVersion: 0.1.*` from the Validated Patterns Helm repo (no `repoURL` required unless you override the default catalog URL). Use `overrides` for Vault keys, bucket lists, and optional Route hostnames. Ensure the `argoProject` you reference is listed in `clusterGroup.argoProjects`.
+Argo CD pulls `chart: vp-s4-storage` and `chartVersion: 0.2.*` from the Validated Patterns Helm repo (no `repoURL` required unless you override the default catalog URL). Use `overrides` for Vault keys, bucket lists, and optional Route hostnames. Ensure the `argoProject` you reference is listed in `clusterGroup.argoProjects`.
 
 ## Configuring OpenShift Routes
 
@@ -200,9 +200,17 @@ Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.exampl
 
 ## Notable changes
 
+* v0.2.1: Fix External Secrets validation so a late Secret is not missed after a
+long Failed Job. Add configurable `validationJob.backoffLimit` (default 20) and
+reduce `validationJob.activeDeadlineSeconds` to 600 (10 min). Run the validation
+job as an Argo Sync hook at sync-wave 2 with `HookSucceeded,BeforeHookCreation`
+so ExternalSecrets apply in wave 1 before validation runs and each sync retry
+gets a fresh job. Shift S4 workload, bucket ConfigMap, and ConsoleLink to wave 3
+and the bootstrap Job to wave 4 so the Deployment still waits for credentials.
+
 ### Argo CD sync wave ordering
 
-Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "2"` on S4 subchart resources (Deployment, Service, PVC, and related objects). Umbrella-chart resources keep their existing waves: ExternalSecrets and the validation Job at **1**, bucket ConfigMap at **2**, bootstrap Job at **3**, CronJob at **5**. That ensures credentials exist before the S4 Deployment starts and the bootstrap Job still runs after the workload is up.
+Default `s4.commonAnnotations` sets `argocd.argoproj.io/sync-wave: "3"` on S4 subchart resources (Deployment, Service, PVC, and related objects). Umbrella-chart resources: ExternalSecrets at **1**, validation Job at **2** (Argo Sync hook with `HookSucceeded,BeforeHookCreation`), bucket ConfigMap and ConsoleLink at **3**, bootstrap Job at **4**, CronJob at **5**. That applies ExternalSecrets before validation runs, recreates a failed validation Job on each sync retry, keeps the S4 Deployment behind credentials, and still runs bootstrap after the workload is up.
 
 ### S3 API Route HTTP (port 80)
 
