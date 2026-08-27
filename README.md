@@ -20,10 +20,10 @@ The playbook and variable model were adapted from [eduffy-redhat/s4-role](https:
 
 S4 has two access paths, stored in **two Vault secrets** and merged into **one Kubernetes Secret** for the upstream `s4` subchart (no subchart changes):
 
-| Access path | Keys | Vault secret (example) |
-|-------------|------|------------------------|
-| **Web UI** | `UI_USERNAME`, `UI_PASSWORD` [, `JWT_SECRET`] | `s4-ui-credentials` |
-| **S3 API** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `s4-api-credentials` |
+| Access path | Keys                                          | Vault secret (example) |
+| ----------- | --------------------------------------------- | ---------------------- |
+| **Web UI**  | `UI_USERNAME`, `UI_PASSWORD` [, `JWT_SECRET`] | `s4-ui-credentials`    |
+| **S3 API**  | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`  | `s4-api-credentials`   |
 
 External Secrets Operator uses **one** `ExternalSecret` (`s4Credentials.secretName`) with two `dataFrom.extract` entries (UI and API Vault paths). That avoids `creationPolicy: Merge`, which fails if the target Secret does not exist yet when both resources reconcile in parallel. The resulting secret is passed to the unmodified `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The API Vault path is the RGW identity for the endpoint, provisioning, and application consumers.
 
@@ -84,7 +84,6 @@ secrets:
         onMissingValue: generate
         override: true
         vaultPolicy: advancedPolicy
-
 ```
 
 ### `examples/chart-secret-values.yaml`
@@ -101,7 +100,6 @@ s4UICredentials:
 
 s4APICredentials:
   vaultKey: secret/data/global/s4-api-credentials
-
 ```
 
 ## Validated Patterns clusterGroup
@@ -160,7 +158,6 @@ clusterGroup:
         #   value: s4.apps.mycluster.example.com
         # - name: s4.route.s3Api.host
         #   value: s3-s4.apps.mycluster.example.com
-
 ```
 
 Argo CD pulls `chart: vp-s4-storage` and `chartVersion: 0.2.*` from the Validated Patterns Helm repo (no `repoURL` required unless you override the default catalog URL). Use `overrides` for Vault keys, bucket lists, and optional Route hostnames. Ensure the `argoProject` you reference is listed in `clusterGroup.argoProjects`.
@@ -246,7 +243,6 @@ Full examples (uncomment the scenario you need):
 #         paths:
 #           - path: /
 #             pathType: Prefix
-
 ```
 
 ### clusterGroup overrides
@@ -293,18 +289,17 @@ overrides_s3_api_internal_only:
 overrides_disable_routes:
   - name: s4.route.enabled
     value: "false"
-
 ```
 
 Typical override names:
 
-| Goal | Override |
-|------|----------|
-| Custom Web UI FQDN | `s4.route.host` |
-| Router annotation | `s4.route.annotations.haproxy\.router\.openshift\.io/timeout` |
-| Custom S3 API FQDN | `s4.route.s3Api.host` |
-| Disable S3 API Route | `s4.route.s3Api.enabled: "false"` |
-| No Routes | `s4.route.enabled: "false"` |
+| Goal                 | Override                                                      |
+| -------------------- | ------------------------------------------------------------- |
+| Custom Web UI FQDN   | `s4.route.host`                                               |
+| Router annotation    | `s4.route.annotations.haproxy\.router\.openshift\.io/timeout` |
+| Custom S3 API FQDN   | `s4.route.s3Api.host`                                         |
+| Disable S3 API Route | `s4.route.s3Api.enabled: "false"`                             |
+| No Routes            | `s4.route.enabled: "false"`                                   |
 
 Rendered resources use the release namespace (e.g. `s4-storage`). Two Routes are created by default: Web UI (`web-ui`, port 5000) and S3 API (`s3-api`, port 7480, object name suffix `-api`).
 
@@ -314,11 +309,11 @@ OpenShift defaults expose both the **Web UI** and **S3 API** on separate edge-te
 
 ### Web UI (human / admin browser access)
 
-| Setting | Behavior |
-|---------|----------|
-| `s4.route.host` empty | OpenShift assigns a predictable hostname (see below). |
-| `s4.route.host` set | Route uses that FQDN; DNS must resolve to the cluster ingress/router. |
-| TLS | Edge termination (HTTPS at the router; HTTP to the pod). |
+| Setting               | Behavior                                                              |
+| --------------------- | --------------------------------------------------------------------- |
+| `s4.route.host` empty | OpenShift assigns a predictable hostname (see below).                 |
+| `s4.route.host` set   | Route uses that FQDN; DNS must resolve to the cluster ingress/router. |
+| TLS                   | Edge termination (HTTPS at the router; HTTP to the pod).              |
 
 ### Predictable FQDNs when `host` is empty
 
@@ -332,9 +327,9 @@ Yes. If you do not set `s4.route.host` or `s4.route.s3Api.host`, OpenShift fills
 
 The `s4` subchart names routes from `s4.fullname`:
 
-| Route | `metadata.name` |
-|-------|-----------------|
-| Web UI | `{s4.fullname}` |
+| Route  | `metadata.name`     |
+| ------ | ------------------- |
+| Web UI | `{s4.fullname}`     |
 | S3 API | `{s4.fullname}-api` |
 
 `{s4.fullname}` is computed as:
@@ -345,11 +340,11 @@ The `s4` subchart names routes from `s4.fullname`:
 
 For a typical Validated Patterns app (`name: vp-s4-storage`, Argo CD release `vp-s4-storage`), `Release.Name` contains `s4`, so:
 
-| Resource | Name |
-|----------|------|
-| Web UI Route | `vp-s4-storage` |
-| S3 API Route | `vp-s4-storage-api` |
-| Service (in-cluster S3) | `vp-s4-storage` |
+| Resource                | Name                |
+| ----------------------- | ------------------- |
+| Web UI Route            | `vp-s4-storage`     |
+| S3 API Route            | `vp-s4-storage-api` |
+| Service (in-cluster S3) | `vp-s4-storage`     |
 
 If your release name does not contain `s4` (e.g. release `storage`), use `storage-s4` and `storage-s4-api` instead.
 
@@ -420,13 +415,13 @@ Or set `s4.route.s3Api.host` to a stable name (e.g. `s3-s4.apps.mycluster.exampl
 
 ## Notable changes
 
-* v0.2.1: Fix External Secrets validation so a late Secret is not missed after a
-long Failed Job. Add configurable `validationJob.backoffLimit` (default 20) and
-reduce `validationJob.activeDeadlineSeconds` to 600 (10 min). Run the validation
-job as an Argo Sync hook at sync-wave 2 with `HookSucceeded,BeforeHookCreation`
-so ExternalSecrets apply in wave 1 before validation runs and each sync retry
-gets a fresh job. Shift S4 workload, bucket ConfigMap, and ConsoleLink to wave 3
-and the bootstrap Job to wave 4 so the Deployment still waits for credentials.
+- v0.2.1: Fix External Secrets validation so a late Secret is not missed after a
+  long Failed Job. Add configurable `validationJob.backoffLimit` (default 20) and
+  reduce `validationJob.activeDeadlineSeconds` to 600 (10 min). Run the validation
+  job as an Argo Sync hook at sync-wave 2 with `HookSucceeded,BeforeHookCreation`
+  so ExternalSecrets apply in wave 1 before validation runs and each sync retry
+  gets a fresh job. Shift S4 workload, bucket ConfigMap, and ConsoleLink to wave 3
+  and the bootstrap Job to wave 4 so the Deployment still waits for credentials.
 
 ### Argo CD sync wave ordering
 
@@ -444,88 +439,89 @@ When the Web UI Route is enabled (`consoleLink.enabled` defaults to `true`), the
 
 ## Source Code
 
-* <https://github.com/rh-aiservices-bu/s4>
-* <https://github.com/eduffy-redhat/s4-role>
+- <https://github.com/rh-aiservices-bu/s4>
+- <https://github.com/eduffy-redhat/s4-role>
 
 ## Requirements
 
-| Repository | Name | Version |
-|------------|------|---------|
-| file://charts/s4 | s4 | 0.1.0 |
-| https://charts.validatedpatterns.io | vp-rbac | 0.1.* |
+| Repository                          | Name    | Version |
+| ----------------------------------- | ------- | ------- |
+| file://charts/s4                    | s4      | 0.1.0   |
+| https://charts.validatedpatterns.io | vp-rbac | 0.1.\*  |
 
 ## Values
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| configJob.activeDeadlineSeconds | int | `3600` |  |
-| configJob.configTimeout | int | `1800` |  |
-| configJob.disabled | bool | `false` |  |
-| configJob.image | string | `"quay.io/validatedpatterns/utility-container:latest"` |  |
-| configJob.imagePullPolicy | string | `"IfNotPresent"` |  |
-| configJob.s4ReadyTimeoutSeconds | int | `600` |  |
-| configJob.schedule | string | `"10 */2 * * *"` |  |
-| consoleLink.enabled | bool | `true` |  |
-| consoleLink.href | string | `""` |  |
-| consoleLink.imageURL | string | `""` |  |
-| consoleLink.ingressDomain | string | `""` |  |
-| consoleLink.section | string | `"Storage"` |  |
-| consoleLink.text | string | `"S4 Web UI"` |  |
-| s4.auth.cookieRequireHttps | bool | `true` |  |
-| s4.auth.enabled | bool | `true` |  |
-| s4.commonAnnotations."argocd.argoproj.io/sync-wave" | string | `"3"` |  |
-| s4.image.pullPolicy | string | `"IfNotPresent"` |  |
-| s4.image.repository | string | `"quay.io/rh-aiservices-bu/s4"` |  |
-| s4.image.tag | string | `"0.3.2"` |  |
-| s4.ingress.enabled | bool | `false` |  |
-| s4.ingress.s3Api.enabled | bool | `false` |  |
-| s4.podSecurityContext.runAsNonRoot | bool | `true` |  |
-| s4.route.annotations."haproxy.router.openshift.io/timeout" | string | `"600s"` |  |
-| s4.route.enabled | bool | `true` |  |
-| s4.route.s3Api.annotations."haproxy.router.openshift.io/timeout" | string | `"600s"` |  |
-| s4.route.s3Api.enabled | bool | `true` |  |
-| s4.route.s3Api.tls.insecureEdgeTerminationPolicy | string | `"Allow"` |  |
-| s4.route.s3Api.tls.termination | string | `"edge"` |  |
-| s4.route.tls.insecureEdgeTerminationPolicy | string | `"Redirect"` |  |
-| s4.route.tls.termination | string | `"edge"` |  |
-| s4.s3.existingSecret | string | `"s4-credentials"` |  |
-| s4.securityContext.allowPrivilegeEscalation | bool | `false` |  |
-| s4.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
-| s4.securityContext.runAsNonRoot | bool | `true` |  |
-| s4.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
-| s4.service.nodePort.enabled | bool | `false` |  |
-| s4.service.type | string | `"ClusterIP"` |  |
-| s4.serviceAccount.create | bool | `true` |  |
-| s4.storage.data.accessMode | string | `"ReadWriteOnce"` |  |
-| s4.storage.data.size | string | `"10Gi"` |  |
-| s4.storage.data.storageClass | string | `""` |  |
-| s4.storage.localStorage.enabled | bool | `false` |  |
-| s4APICredentials.vaultKey | string | `"secret/data/global/s4-api-credentials"` |  |
-| s4Credentials.secretName | string | `"s4-credentials"` |  |
-| s4Role.buckets | list | `[]` |  |
-| s4Role.destroy | bool | `false` |  |
-| s4Role.endpoint.address | string | `""` |  |
-| s4Role.endpoint.port | int | `7480` |  |
-| s4Role.endpoint.protocol | string | `"http"` |  |
-| s4UICredentials.vaultKey | string | `"secret/data/global/s4-ui-credentials"` |  |
-| secretStore.kind | string | `"ClusterSecretStore"` |  |
-| secretStore.name | string | `"vault-backend"` |  |
-| serviceAccountName | string | `"vp-s4-storage-sa"` |  |
-| serviceAccountNamespace | string | `""` |  |
-| validationJob.activeDeadlineSeconds | int | `600` |  |
-| validationJob.backoffLimit | int | `20` |  |
-| validationJob.disabled | bool | `false` |  |
-| vp-rbac.roles.external-secrets-validator.namespace | string | `""` |  |
-| vp-rbac.roles.external-secrets-validator.rules[0].apiGroups[0] | string | `"external-secrets.io"` |  |
-| vp-rbac.roles.external-secrets-validator.rules[0].apiGroups[1] | string | `""` |  |
-| vp-rbac.roles.external-secrets-validator.rules[0].resources[0] | string | `"externalsecrets"` |  |
-| vp-rbac.roles.external-secrets-validator.rules[0].resources[1] | string | `"secrets"` |  |
-| vp-rbac.roles.external-secrets-validator.rules[0].verbs[0] | string | `"get"` |  |
-| vp-rbac.roles.external-secrets-validator.rules[0].verbs[1] | string | `"list"` |  |
-| vp-rbac.roles.external-secrets-validator.rules[0].verbs[2] | string | `"watch"` |  |
-| vp-rbac.serviceAccounts.vp-s4-storage-sa.namespace | string | `""` |  |
-| vp-rbac.serviceAccounts.vp-s4-storage-sa.roleBindings.clusterRoles | list | `[]` |  |
-| vp-rbac.serviceAccounts.vp-s4-storage-sa.roleBindings.roles[0] | string | `"external-secrets-validator"` |  |
+| Key                                                                | Type   | Default                                                | Description |
+| ------------------------------------------------------------------ | ------ | ------------------------------------------------------ | ----------- |
+| configJob.activeDeadlineSeconds                                    | int    | `3600`                                                 |             |
+| configJob.configTimeout                                            | int    | `1800`                                                 |             |
+| configJob.disabled                                                 | bool   | `false`                                                |             |
+| configJob.image                                                    | string | `"quay.io/validatedpatterns/utility-container:latest"` |             |
+| configJob.imagePullPolicy                                          | string | `"IfNotPresent"`                                       |             |
+| configJob.s4ReadyTimeoutSeconds                                    | int    | `600`                                                  |             |
+| configJob.schedule                                                 | string | `"10 */2 * * *"`                                       |             |
+| consoleLink.enabled                                                | bool   | `true`                                                 |             |
+| consoleLink.href                                                   | string | `""`                                                   |             |
+| consoleLink.imageURL                                               | string | `""`                                                   |             |
+| consoleLink.ingressDomain                                          | string | `""`                                                   |             |
+| consoleLink.section                                                | string | `"Storage"`                                            |             |
+| consoleLink.text                                                   | string | `"S4 Web UI"`                                          |             |
+| s4.auth.cookieRequireHttps                                         | bool   | `true`                                                 |             |
+| s4.auth.enabled                                                    | bool   | `true`                                                 |             |
+| s4.commonAnnotations."argocd.argoproj.io/sync-wave"                | string | `"3"`                                                  |             |
+| s4.image.pullPolicy                                                | string | `"IfNotPresent"`                                       |             |
+| s4.image.repository                                                | string | `"quay.io/rh-aiservices-bu/s4"`                        |             |
+| s4.image.tag                                                       | string | `"0.3.2"`                                              |             |
+| s4.ingress.enabled                                                 | bool   | `false`                                                |             |
+| s4.ingress.s3Api.enabled                                           | bool   | `false`                                                |             |
+| s4.podSecurityContext.runAsNonRoot                                 | bool   | `true`                                                 |             |
+| s4.route.annotations."haproxy.router.openshift.io/timeout"         | string | `"600s"`                                               |             |
+| s4.route.enabled                                                   | bool   | `true`                                                 |             |
+| s4.route.s3Api.annotations."haproxy.router.openshift.io/timeout"   | string | `"600s"`                                               |             |
+| s4.route.s3Api.enabled                                             | bool   | `true`                                                 |             |
+| s4.route.s3Api.tls.insecureEdgeTerminationPolicy                   | string | `"Allow"`                                              |             |
+| s4.route.s3Api.tls.termination                                     | string | `"edge"`                                               |             |
+| s4.route.tls.insecureEdgeTerminationPolicy                         | string | `"Redirect"`                                           |             |
+| s4.route.tls.termination                                           | string | `"edge"`                                               |             |
+| s4.s3.existingSecret                                               | string | `"s4-credentials"`                                     |             |
+| s4.securityContext.allowPrivilegeEscalation                        | bool   | `false`                                                |             |
+| s4.securityContext.capabilities.drop[0]                            | string | `"ALL"`                                                |             |
+| s4.securityContext.runAsNonRoot                                    | bool   | `true`                                                 |             |
+| s4.securityContext.seccompProfile.type                             | string | `"RuntimeDefault"`                                     |             |
+| s4.service.nodePort.enabled                                        | bool   | `false`                                                |             |
+| s4.service.type                                                    | string | `"ClusterIP"`                                          |             |
+| s4.serviceAccount.create                                           | bool   | `true`                                                 |             |
+| s4.storage.data.accessMode                                         | string | `"ReadWriteOnce"`                                      |             |
+| s4.storage.data.size                                               | string | `"10Gi"`                                               |             |
+| s4.storage.data.storageClass                                       | string | `""`                                                   |             |
+| s4.storage.localStorage.enabled                                    | bool   | `false`                                                |             |
+| s4APICredentials.vaultKey                                          | string | `"secret/data/global/s4-api-credentials"`              |             |
+| s4Credentials.secretName                                           | string | `"s4-credentials"`                                     |             |
+| s4Role.buckets                                                     | list   | `[]`                                                   |             |
+| s4Role.destroy                                                     | bool   | `false`                                                |             |
+| s4Role.endpoint.address                                            | string | `""`                                                   |             |
+| s4Role.endpoint.port                                               | int    | `7480`                                                 |             |
+| s4Role.endpoint.protocol                                           | string | `"http"`                                               |             |
+| s4UICredentials.vaultKey                                           | string | `"secret/data/global/s4-ui-credentials"`               |             |
+| secretStore.kind                                                   | string | `"ClusterSecretStore"`                                 |             |
+| secretStore.name                                                   | string | `"vault-backend"`                                      |             |
+| serviceAccountName                                                 | string | `"vp-s4-storage-sa"`                                   |             |
+| serviceAccountNamespace                                            | string | `""`                                                   |             |
+| validationJob.activeDeadlineSeconds                                | int    | `600`                                                  |             |
+| validationJob.backoffLimit                                         | int    | `20`                                                   |             |
+| validationJob.disabled                                             | bool   | `false`                                                |             |
+| vp-rbac.roles.external-secrets-validator.namespace                 | string | `""`                                                   |             |
+| vp-rbac.roles.external-secrets-validator.rules[0].apiGroups[0]     | string | `"external-secrets.io"`                                |             |
+| vp-rbac.roles.external-secrets-validator.rules[0].apiGroups[1]     | string | `""`                                                   |             |
+| vp-rbac.roles.external-secrets-validator.rules[0].resources[0]     | string | `"externalsecrets"`                                    |             |
+| vp-rbac.roles.external-secrets-validator.rules[0].resources[1]     | string | `"secrets"`                                            |             |
+| vp-rbac.roles.external-secrets-validator.rules[0].verbs[0]         | string | `"get"`                                                |             |
+| vp-rbac.roles.external-secrets-validator.rules[0].verbs[1]         | string | `"list"`                                               |             |
+| vp-rbac.roles.external-secrets-validator.rules[0].verbs[2]         | string | `"watch"`                                              |             |
+| vp-rbac.serviceAccounts.vp-s4-storage-sa.namespace                 | string | `""`                                                   |             |
+| vp-rbac.serviceAccounts.vp-s4-storage-sa.roleBindings.clusterRoles | list   | `[]`                                                   |             |
+| vp-rbac.serviceAccounts.vp-s4-storage-sa.roleBindings.roles[0]     | string | `"external-secrets-validator"`                         |             |
 
-----------------------------------------------
+---
+
 Autogenerated from chart metadata using [helm-docs v1.14.2](https://github.com/norwoodj/helm-docs/releases/v1.14.2)
