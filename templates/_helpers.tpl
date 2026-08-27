@@ -95,9 +95,9 @@ volumes:
     configMap:
       name: {{ include "vp-s4-storage.fullname" $ }}-s4-buckets-playbook
       items:
-        - key: s4-buckets.yml
+        - key: s4-buckets.yml # gitleaks:allow
           path: s4-buckets.yml
-        - key: vars.defaults.yml
+        - key: vars.defaults.yml # gitleaks:allow
           path: vars/defaults.yml
 initContainers:
   - name: wait-for-s4

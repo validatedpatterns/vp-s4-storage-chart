@@ -20,7 +20,7 @@ Defaults assume an OpenShift cluster: OpenShift Route for the Web UI (Ingress di
 ## Bucket provisioning
 
 Bucket create/destroy logic is shipped as an Ansible playbook in a ConfigMap (`playbooks/s4-buckets.yml`),
-mounted into the [utility-container](https://quay.io/validatedpatterns/utility-container) (ansible +
+mounted into the [utility-container](https://quay.io/validatedpatterns/utility-container) (Ansible +
 `amazon.aws`). Default variables live in `vars/defaults.yml` on the mount (ConfigMap key `vars.defaults.yml`);
 the Job and CronJob pass `s4Role.buckets`, **`s4-credentials`**, and optional `s4Role.destroy` at runtime.
 
@@ -41,7 +41,7 @@ if the target Secret does not exist yet when both resources reconcile in paralle
 is passed to the unmodified `s4` subchart via `s4.s3.existingSecret` and is used by bucket Jobs. The API
 Vault path is the RGW identity for the endpoint, provisioning, and application consumers.
 
-Default examples use `s4admin` for the UI user and S3 access key id; the UI password and API secret key are **generated** (`advancedPolicy`).
+Default examples use `s4admin` for the UI user and S3 access key ID; the UI password and API secret key are **generated** (`advancedPolicy`).
 
 Copy `examples/secrets/values-secret.v2.yaml` into your pattern `common/examples/secrets/` and run your pattern secrets tooling (e.g. `./scripts/make-secrets.sh`). Then point the chart at the Vault paths with a values overlay like `examples/chart-secret-values.yaml`.
 
@@ -67,7 +67,7 @@ When this chart is published to [charts.validatedpatterns.io](https://charts.val
 {{ .Files.Get "examples/clustergroup-application.yaml" | trimSuffix "\n" }}
 ```
 
-Argo CD pulls `chart: vp-s4-storage` and `chartVersion: 0.2.*` from the Validated Patterns Helm repo (no `repoURL` required unless you override the default catalog URL). Use `overrides` for Vault keys, bucket lists, and optional Route hostnames. Ensure the `argoProject` you reference is listed in `clusterGroup.argoProjects`.
+Argo CD pulls `chart: vp-s4-storage` and `chartVersion: 0.2.*` from the Validated Patterns Helm repository (no `repoURL` required unless you override the default catalog URL). Use `overrides` for Vault keys, bucket lists, and optional Route hostnames. Ensure the `argoProject` you reference is listed in `clusterGroup.argoProjects`.
 
 ## Configuring OpenShift Routes
 
