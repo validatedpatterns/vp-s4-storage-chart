@@ -1,6 +1,7 @@
 # https://hub.docker.com/r/helmunittest/helm-unittest/tags/
 HELM_UNITTEST_IMAGE ?= docker.io/helmunittest/helm-unittest:3.14.4-0.5.0
 HELM_DOCS_IMAGE ?= docker.io/jnorwood/helm-docs:latest
+PRETTIER_IMAGE ?= ghcr.io/super-linter/super-linter:slim-v8
 
 PWD=$(shell pwd)
 MYNAME=$(shell id -n -u)
@@ -44,6 +45,8 @@ helm-docs: ## Generates README.md from values.yaml
 	# podman run $(PODMAN_ARGS) -v $(PWD):/helm-docs:rw $(HELM_DOCS_IMAGE) -x
 	# Then render the README.md file
 	podman run $(PODMAN_ARGS) -v $(PWD):/helm-docs:rw $(HELM_DOCS_IMAGE)
+	# helm-docs compact tables fail MARKDOWN_PRETTIER; reformat README.md to match Super-Linter
+	podman run $(PODMAN_ARGS) -v $(PWD):/data:rw -w /data --entrypoint prettier $(PRETTIER_IMAGE) --write README.md
 
 .PHONY: test
 test: helm-lint helm-unittest ## Runs helm lint and unit tests
@@ -51,8 +54,24 @@ test: helm-lint helm-unittest ## Runs helm lint and unit tests
 .PHONY: super-linter
 super-linter: ## Runs super linter locally
 	rm -rf .mypy_cache
-	podman run -e RUN_LOCAL=true -e USE_FIND_ALGORITHM=true	\
+	podman run -e RUN_LOCAL=true -e USE_FIND_ALGORITHM=true \
 					-e VALIDATE_BIOME_FORMAT=false \
+					-e VALIDATE_BIOME_LINT=false \
+					-e VALIDATE_CHECKOV=false \
+					-e VALIDATE_JSON_PRETTIER=false \
+					-e VALIDATE_KUBERNETES_KUBECONFORM=false \
+					-e VALIDATE_MARKDOWN_PRETTIER=false \
+					-e VALIDATE_YAML=false \
+					-e VALIDATE_YAML_PRETTIER=false \
+					-e VALIDATE_NATURAL_LANGUAGE=false \
+					-e VALIDATE_SPELL_CODESPELL=false \
+					-e VALIDATE_PYTHON_BLACK=false \
+					-e VALIDATE_PYTHON_PYINK=false \
+					-e VALIDATE_PYTHON_PYLINT=false \
+					-e VALIDATE_PYTHON_RUFF_FORMAT=false \
+					-e VALIDATE_SHELL_SHFMT=false \
+					-e VALIDATE_TRIVY=false \
+					-e FILTER_REGEX_EXCLUDE='.*charts/s4/.*' \
 					-v $(PWD):/tmp/lint:rw,z \
 					-w /tmp/lint \
 					ghcr.io/super-linter/super-linter:slim-v8

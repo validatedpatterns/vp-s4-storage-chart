@@ -71,9 +71,9 @@ s4:
   serviceAccount:
     create: true
 
-  # Argo CD sync order: ExternalSecrets/validation (1), bucket ConfigMap (2), S4 workload (2), bootstrap (3), CronJob (5)
+  # Argo CD sync order: ExternalSecrets (1), validation hook (2), S4 workload/ConfigMap (3), bootstrap (4), CronJob (5)
   commonAnnotations:
-    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-wave: "3"
 
   podSecurityContext:
     runAsNonRoot: true
@@ -113,7 +113,8 @@ configJob:
 
 validationJob:
   disabled: false
-  activeDeadlineSeconds: 3600
+  activeDeadlineSeconds: 600
+  backoffLimit: 20
 
 # OpenShift console Application menu link to the S4 Web UI Route (enabled by default when the Route is enabled)
 consoleLink:

@@ -25,6 +25,9 @@ tests:
           path: spec.target.name
           value: s4-credentials
       - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "1"
+      - equal:
           path: spec.target.creationPolicy
           value: Owner
       - equal:
@@ -54,6 +57,21 @@ tests:
       - equal:
           path: spec.template.spec.serviceAccountName
           value: vp-s4-storage-sa
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/hook"]
+          value: Sync
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/hook-delete-policy"]
+          value: HookSucceeded,BeforeHookCreation
+      - equal:
+          path: spec.backoffLimit
+          value: 20
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 600
       - matchRegex:
           path: spec.template.spec.containers[0].command[2]
           pattern: EXTERNAL_SECRET="s4-credentials"
@@ -105,6 +123,18 @@ tests:
       - template: templates/s4-buckets-cronjob.yaml
         isKind:
           of: CronJob
+      - template: templates/s4-buckets-configmap.yaml
+        equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
+      - template: templates/s4-buckets-bootstrap-job.yaml
+        equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "4"
+      - template: templates/s4-buckets-cronjob.yaml
+        equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "5"
       - template: templates/s4-buckets-bootstrap-job.yaml
         equal:
           path: spec.template.spec.containers[0].envFrom[0].secretRef.name
@@ -119,6 +149,9 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].envFrom[1].secretRef.name
           value: s4-credentials
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
 
   - it: skips bucket jobs when no buckets are configured
     set:
@@ -159,6 +192,9 @@ tests:
       - equal:
           path: spec.href
           value: https://s4.apps.example.com
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
 
   - it: builds ConsoleLink href from global.localClusterDomain when route host is empty
     set:

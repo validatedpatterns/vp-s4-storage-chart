@@ -5,7 +5,7 @@ kind: ConfigMap
 metadata:
   name: {{ include "vp-s4-storage.fullname" . }}-s4-buckets-playbook
   annotations:
-    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-wave: "3"
 data:
   s4-buckets.yml: |
 {{ .Files.Get "playbooks/s4-buckets.yml" | indent 4 }}

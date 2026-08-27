@@ -5,7 +5,7 @@ kind: Job
 metadata:
   name: {{ include "vp-s4-storage.fullname" . }}-s4-buckets-bootstrap
   annotations:
-    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   parallelism: 1
   completions: 1
